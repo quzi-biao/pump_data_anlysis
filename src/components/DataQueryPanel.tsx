@@ -16,6 +16,7 @@ export default function DataQueryPanel({ configs }: Props) {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [comparisonType, setComparisonType] = useState<ComparisonType>('none');
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,15 +33,22 @@ export default function DataQueryPanel({ configs }: Props) {
       const response = await fetch('/api/saved-queries');
       const result = await response.json();
       if (result.success) {
-        const queries = result.data.map((q: any) => ({
-          id: q.id.toString(),
-          name: q.name,
-          configId: q.config_id,
-          startTime: q.start_time,
-          endTime: q.end_time,
-          comparisonType: q.comparison_type,
-          savedAt: q.created_at,
-        }));
+        const queries = result.data.map((q: any) => {
+          const params = typeof q.query_params === 'string' 
+            ? JSON.parse(q.query_params) 
+            : q.query_params;
+          
+          return {
+            id: q.id.toString(),
+            name: q.name,
+            configId: q.config_id,
+            startTime: params.startTime || '',
+            endTime: params.endTime || '',
+            comparisonType: params.comparisonType || 'none',
+            selectedMonths: params.selectedMonths || [],
+            savedAt: q.created_at,
+          };
+        });
         setSavedQueries(queries);
       }
     } catch (error) {
@@ -50,21 +58,31 @@ export default function DataQueryPanel({ configs }: Props) {
 
   // 保存查询到数据库
   const saveQuery = async (name: string) => {
-    if (!selectedConfigId || !startTime || !endTime) {
+    if (!selectedConfigId) {
+      alert('请选择分析配置');
+      return;
+    }
+
+    if (selectedMonths.length === 0 && (!startTime || !endTime)) {
       alert('请完善查询条件');
       return;
     }
 
     try {
+      const queryParams = {
+        startTime,
+        endTime,
+        comparisonType,
+        selectedMonths: selectedMonths.length > 0 ? selectedMonths : undefined,
+      };
+
       const response = await fetch('/api/saved-queries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           configId: selectedConfigId,
-          startTime,
-          endTime,
-          comparisonType,
+          queryParams,
         }),
       });
 
@@ -88,6 +106,68 @@ export default function DataQueryPanel({ configs }: Props) {
     setStartTime(query.startTime);
     setEndTime(query.endTime);
     setComparisonType(query.comparisonType);
+    setSelectedMonths(query.selectedMonths || []);
+  };
+
+  // 直接执行已保存的查询
+  const queryDirect = async (query: SavedQuery) => {
+    // 先加载查询参数
+    loadQuery(query);
+    
+    // 等待状态更新后执行查询
+    setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        let queryStartTime: string;
+        let queryEndTime: string;
+        let queryComparisonType = query.comparisonType;
+
+        if (query.selectedMonths && query.selectedMonths.length > 0) {
+          // 月份选择模式
+          const sortedMonths = [...query.selectedMonths].sort();
+          const firstMonth = new Date(sortedMonths[0] + '-01');
+          const lastMonth = new Date(sortedMonths[sortedMonths.length - 1] + '-01');
+          lastMonth.setMonth(lastMonth.getMonth() + 1);
+          lastMonth.setDate(0);
+          
+          queryStartTime = firstMonth.toISOString();
+          queryEndTime = lastMonth.toISOString();
+        } else {
+          // 时间范围模式
+          queryStartTime = new Date(query.startTime).toISOString();
+          queryEndTime = new Date(query.endTime).toISOString();
+        }
+
+        const params: QueryParams = {
+          analysisId: query.configId,
+          startTime: queryStartTime,
+          endTime: queryEndTime,
+          comparisonType: queryComparisonType,
+          selectedMonths: query.selectedMonths && query.selectedMonths.length > 0 ? query.selectedMonths : undefined,
+        };
+
+        const response = await fetch('/api/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        });
+
+        const apiResult = await response.json();
+
+        if (apiResult.success) {
+          setResult(apiResult.data);
+        } else {
+          setError(apiResult.error || '查询失败');
+        }
+      } catch (err) {
+        setError('查询失败，请检查网络连接');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }, 100);
   };
 
   // 删除已保存的查询
@@ -117,8 +197,9 @@ export default function DataQueryPanel({ configs }: Props) {
       return;
     }
 
-    if (!startTime || !endTime) {
-      alert('请选择时间范围');
+    // 验证时间选择
+    if (selectedMonths.length === 0 && (!startTime || !endTime)) {
+      alert('请选择时间范围或月份');
       return;
     }
 
@@ -126,11 +207,33 @@ export default function DataQueryPanel({ configs }: Props) {
     setError(null);
 
     try {
+      let queryStartTime: string;
+      let queryEndTime: string;
+      let queryComparisonType = comparisonType;
+
+      if (selectedMonths.length > 0) {
+        // 月份选择模式
+        const sortedMonths = [...selectedMonths].sort();
+        const firstMonth = new Date(sortedMonths[0] + '-01');
+        const lastMonth = new Date(sortedMonths[sortedMonths.length - 1] + '-01');
+        lastMonth.setMonth(lastMonth.getMonth() + 1);
+        lastMonth.setDate(0); // 设置为月末
+        
+        queryStartTime = firstMonth.toISOString();
+        queryEndTime = lastMonth.toISOString();
+        // 不强制设置对比类型，使用用户选择的 comparisonType
+      } else {
+        // 时间范围模式
+        queryStartTime = new Date(startTime).toISOString();
+        queryEndTime = new Date(endTime).toISOString();
+      }
+
       const params: QueryParams = {
         analysisId: selectedConfigId,
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        comparisonType,
+        startTime: queryStartTime,
+        endTime: queryEndTime,
+        comparisonType: queryComparisonType,
+        selectedMonths: selectedMonths.length > 0 ? selectedMonths : undefined,
       };
 
       const response = await fetch('/api/query', {
@@ -203,10 +306,12 @@ export default function DataQueryPanel({ configs }: Props) {
           endTime={endTime}
           comparisonType={comparisonType}
           loading={loading}
+          selectedMonths={selectedMonths}
           onConfigChange={setSelectedConfigId}
           onStartTimeChange={setStartTime}
           onEndTimeChange={setEndTime}
           onComparisonTypeChange={setComparisonType}
+          onSelectedMonthsChange={setSelectedMonths}
           onQuery={handleQuery}
           onSave={() => setShowSaveDialog(true)}
         />
@@ -215,6 +320,7 @@ export default function DataQueryPanel({ configs }: Props) {
           queries={savedQueries}
           configs={configs}
           onLoad={loadQuery}
+          onQueryDirect={queryDirect}
           onDelete={deleteQuery}
         />
       </div>

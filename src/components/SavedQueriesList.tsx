@@ -10,6 +10,7 @@ export interface SavedQuery {
   startTime: string;
   endTime: string;
   comparisonType: ComparisonType;
+  selectedMonths?: string[];
   savedAt: string;
 }
 
@@ -17,10 +18,11 @@ interface Props {
   queries: SavedQuery[];
   configs: AnalysisConfig[];
   onLoad: (query: SavedQuery) => void;
+  onQueryDirect: (query: SavedQuery) => void;
   onDelete: (id: string) => void;
 }
 
-export default function SavedQueriesList({ queries, configs, onLoad, onDelete }: Props) {
+export default function SavedQueriesList({ queries, configs, onLoad, onQueryDirect, onDelete }: Props) {
   if (queries.length === 0) return null;
 
   return (
@@ -46,12 +48,20 @@ export default function SavedQueriesList({ queries, configs, onLoad, onDelete }:
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>
-              <button
-                onClick={() => onLoad(query)}
-                className="w-full px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-              >
-                加载
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => onLoad(query)}
+                  className="flex-1 px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700"
+                >
+                  加载
+                </button>
+                <button
+                  onClick={() => onQueryDirect(query)}
+                  className="flex-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                >
+                  查询
+                </button>
+              </div>
             </div>
           );
         })}

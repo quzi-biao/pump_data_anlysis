@@ -45,6 +45,7 @@ export interface QueryParams {
   startTime: string; // ISO 8601 格式
   endTime: string;
   comparisonType: ComparisonType;
+  selectedMonths?: string[]; // 选中的月份列表，格式: YYYY-MM
 }
 
 // InfluxDB 数据点

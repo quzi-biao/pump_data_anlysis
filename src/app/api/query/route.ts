@@ -71,6 +71,15 @@ export async function POST(request: NextRequest) {
       // 为每个月的数据添加月份标识
       const comparisonData: any[] = [];
       groupedByMonth.forEach((monthData, monthKey) => {
+        // 如果指定了selectedMonths，只包含选中的月份
+        if (params.selectedMonths && params.selectedMonths.length > 0) {
+          // 检查当前月份是否在选中列表中
+          const isSelected = params.selectedMonths.some(selectedMonth => {
+            return monthKey.startsWith(selectedMonth);
+          });
+          if (!isSelected) return;
+        }
+        
         monthData.forEach(row => {
           comparisonData.push({
             ...row,

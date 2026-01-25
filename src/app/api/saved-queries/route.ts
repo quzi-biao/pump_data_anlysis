@@ -6,9 +6,12 @@ interface SavedQuery {
   id?: number;
   name: string;
   config_id: number;
-  start_time: string;
-  end_time: string;
-  comparison_type: ComparisonType;
+  query_params: {
+    startTime: string;
+    endTime: string;
+    comparisonType: ComparisonType;
+    selectedMonths?: string[];
+  };
   created_at?: string;
 }
 
@@ -36,9 +39,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, configId, startTime, endTime, comparisonType } = body;
+    const { name, configId, queryParams } = body;
 
-    if (!name || !configId || !startTime || !endTime) {
+    if (!name || !configId || !queryParams) {
       return NextResponse.json(
         { success: false, error: '缺少必要参数' },
         { status: 400 }
@@ -46,9 +49,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query<any>(
-      `INSERT INTO saved_queries (name, config_id, start_time, end_time, comparison_type) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [name, configId, startTime, endTime, comparisonType || 'none']
+      `INSERT INTO saved_queries (name, config_id, query_params) 
+       VALUES (?, ?, ?)`,
+      [name, configId, JSON.stringify(queryParams)]
     );
 
     return NextResponse.json({
