@@ -1,0 +1,120 @@
+import { InfluxDB } from '@influxdata/influxdb-client';
+import { DataPoint, TimeDimension } from '@/types';
+
+const INFLUX_CONFIG = {
+  url: 'http://43.139.93.159:8086',
+  token: 'oPeLbhvS-3OymtJj9z_XmQa7DyvHJHkbh_l-NFYUYYhXBSFHuIElzHy4ULWizikeGLKAiu7D57rhoGEp2cVOZA==',
+  org: 'watersAI',
+  bucket: 'metricsData',
+};
+
+let influxDB: InfluxDB | null = null;
+
+export function getInfluxDB(): InfluxDB {
+  if (!influxDB) {
+    influxDB = new InfluxDB({
+      url: INFLUX_CONFIG.url,
+      token: INFLUX_CONFIG.token,
+    });
+  }
+  return influxDB;
+}
+
+function getAggregationWindow(timeDimension: TimeDimension): string {
+  switch (timeDimension) {
+    case 'minute':
+      return '1m';
+    case 'hour':
+      return '1h';
+    case 'day':
+      return '1d';
+    default:
+      return '1m';
+  }
+}
+
+export async function queryIndicatorData(
+  indicatorId: string,
+  startTime: string,
+  endTime: string,
+  timeDimension: TimeDimension = 'minute',
+  aggregationType: string = 'avg'
+): Promise<DataPoint[]> {
+  const queryApi = getInfluxDB().getQueryApi(INFLUX_CONFIG.org);
+  const aggregationWindow = getAggregationWindow(timeDimension);
+
+  // 根据聚合类型使用对应的 InfluxDB 聚合函数
+  let aggregateFn: string;
+  switch (aggregationType) {
+    case 'avg':
+      aggregateFn = 'mean';
+      break;
+    case 'max':
+      aggregateFn = 'max';
+      break;
+    case 'min':
+      aggregateFn = 'min';
+      break;
+    default:
+      aggregateFn = 'mean';
+  }
+  
+  const query = `
+    from(bucket: "${INFLUX_CONFIG.bucket}")
+    |> range(start: ${startTime}, stop: ${endTime})
+    |> filter(fn: (r) => 
+        r["_measurement"] == "plcData" and
+        r["_field"] == "value" and
+        r["indicator_id"] == "${indicatorId}")
+    |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false)
+  `;
+
+  const dataPoints: DataPoint[] = [];
+
+  return new Promise((resolve, reject) => {
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row);
+        dataPoints.push({
+          time: o._time,
+          value: parseFloat(o._value),
+          indicator_id: indicatorId,
+        });
+      },
+      error(error) {
+        console.error('InfluxDB query error:', error);
+        reject(error);
+      },
+      complete() {
+        resolve(dataPoints);
+      },
+    });
+  });
+}
+
+export async function queryMultipleIndicators(
+  indicatorIds: string[],
+  startTime: string,
+  endTime: string,
+  timeDimension: TimeDimension = 'minute',
+  indicatorAggregations?: Map<string, string>
+): Promise<Map<string, DataPoint[]>> {
+  const results = new Map<string, DataPoint[]>();
+
+  await Promise.all(
+    indicatorIds.map(async (indicatorId) => {
+      const aggregationType = indicatorAggregations?.get(indicatorId) || 'avg';
+      
+      const data = await queryIndicatorData(
+        indicatorId,
+        startTime,
+        endTime,
+        timeDimension,
+        aggregationType
+      );
+      results.set(indicatorId, data);
+    })
+  );
+
+  return results;
+}
