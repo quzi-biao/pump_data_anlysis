@@ -38,6 +38,7 @@ export function calculateExtendedIndicator(
     // 按名称长度降序排序，避免短名称被优先替换导致长名称匹配失败
     const sortedEntries = Array.from(values.entries()).sort((a, b) => b[0].length - a[0].length);
     
+    let hasAnyValue = false;
     sortedEntries.forEach(([indicatorName, value]) => {
       // 移除指标名称中的空格
       const cleanName = indicatorName.replace(/\s/g, '');
@@ -45,16 +46,21 @@ export function calculateExtendedIndicator(
       const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       // 使用全局替换，由于已按长度排序，长名称会先被替换，避免部分匹配问题
       const regex = new RegExp(escapedName, 'g');
-      expression = expression.replace(regex, `(${value})`);
+      if (regex.test(expression)) {
+        expression = expression.replace(regex, `(${value})`);
+        hasAnyValue = true;
+      }
     });
 
     // 检查是否还有未替换的指标名称（包含中文字符）
-    // 如果公式中的指标在 values 中不存在，表达式将包含非数字/运算符字符
-    if (expression === originalExpression || /[\u4e00-\u9fa5]/.test(expression)) {
-      // 公式中引用的指标不存在或没有数据，返回 null
-      // console.warn('Formula references missing indicators:', formula);
-      // console.warn('Available indicators:', Array.from(values.keys()));
-      return null;
+    if (/[\u4e00-\u9fa5]/.test(expression)) {
+      // 如果没有任何指标被替换，说明所有引用的指标都不存在
+      if (!hasAnyValue) {
+        return null;
+      }
+      // 如果有部分指标被替换，将未替换的指标名（缺失的指标）替换为 0
+      // 这样可以处理部分指标为 null 的情况（如求和时某些项为 null）
+      expression = expression.replace(/[\u4e00-\u9fa5]+/g, '0');
     }
 
     // 安全计算表达式
@@ -268,6 +274,13 @@ export function processAnalysisData(
     });
 
     // 按依赖顺序计算扩展指标
+    const extendedResults: Record<string, number | null> = {};
+    
+    // 只在第一行数据时输出可用指标
+    if (rows.length === 0) {
+      console.log('Available indicators for calculation:', Array.from(indicatorValues.keys()));
+    }
+    
     sortedExtendedIndicators.forEach((extIndicator) => {
       // 使用名称映射进行计算
       const calculatedValue = calculateExtendedIndicator(
@@ -286,12 +299,19 @@ export function processAnalysisData(
         finalValue = calculatedValue;
       }
       
+      extendedResults[extIndicator.name] = finalValue;
+      
       if (finalValue !== null) {
         // 将计算结果添加到 indicatorValues 中，供后续扩展指标使用
         indicatorValues.set(extIndicator.name, finalValue);
         row[extIndicator.name] = finalValue;
       }
     });
+    
+    // 只在第一行数据时输出扩展指标计算结果
+    if (rows.length === 0) {
+      console.log('Extended indicators calculation results (first row):', extendedResults);
+    }
 
     rows.push(row);
   });

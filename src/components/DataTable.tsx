@@ -49,14 +49,14 @@ export default function DataTable({ result }: Props) {
           <thead className="bg-gray-50">
             <tr>
               {hasComparisonGroup && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-30 border-r border-gray-200">
                   对比组
                 </th>
               )}
               {columns.map((column) => (
                 <th
                   key={column}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50"
                 >
                   {column === 'timestamp' ? '时间' : column}
                 </th>
@@ -67,7 +67,7 @@ export default function DataTable({ result }: Props) {
             {data.map((row, index) => (
               <tr key={index} className="hover:bg-gray-50">
                 {hasComparisonGroup && (
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 sticky left-0 bg-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200">
                     {(row as any).comparisonGroup}
                   </td>
                 )}

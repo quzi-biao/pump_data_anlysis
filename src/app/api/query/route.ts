@@ -127,6 +127,9 @@ export async function POST(request: NextRequest) {
     const dataMapByName = new Map<string, DataPoint[]>();
     const visibleIndicators = new Set<string>();
     
+    console.log('Total base indicators configured:', config.baseIndicators.length);
+    console.log('Base indicators:', config.baseIndicators.map(ind => ({ name: ind.name, visible: ind.visible })));
+    
     await Promise.all(
       config.baseIndicators.map(async (indicator) => {
         let data: DataPoint[];
@@ -166,12 +169,18 @@ export async function POST(request: NextRequest) {
         // 使用指标名称作为键存储数据
         dataMapByName.set(indicator.name, data);
         
+        console.log(`Indicator "${indicator.name}": ${data.length} data points, visible: ${indicator.visible !== false}`);
+        
         // 记录可见的指标
         if (indicator.visible !== false) {
           visibleIndicators.add(indicator.name);
         }
       })
     );
+    
+    console.log('Visible indicators:', Array.from(visibleIndicators));
+    console.log('Total extended indicators:', config.extendedIndicators.length);
+    console.log('Extended indicators formulas:', config.extendedIndicators.map(ind => ({ name: ind.name, formula: ind.formula })));
 
     // 查询扩展指标的导入数据（如果有关联标签）
     const extendedDataMap = new Map<string, DataPoint[]>();
