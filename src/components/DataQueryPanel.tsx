@@ -24,6 +24,7 @@ export default function DataQueryPanel({ configs }: Props) {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [currentChartStyles, setCurrentChartStyles] = useState<any>(null);
   const [currentQueryId, setCurrentQueryId] = useState<string | null>(null);
+  const [currentQueryName, setCurrentQueryName] = useState<string | null>(null);
 
   // 从数据库加载已保存的查询
   useEffect(() => {
@@ -116,6 +117,7 @@ export default function DataQueryPanel({ configs }: Props) {
     setComparisonType(query.comparisonType);
     setSelectedMonths(query.selectedMonths || []);
     setCurrentQueryId(query.id);
+    setCurrentQueryName(query.name);
     // 加载保存的图表样式，如果没有则重置为null
     setCurrentChartStyles(query.chartStyles || null);
   };
@@ -249,6 +251,7 @@ export default function DataQueryPanel({ configs }: Props) {
     // 重置样式设置
     setCurrentChartStyles(null);
     setCurrentQueryId(null);
+    setCurrentQueryName(null);
 
     try {
       let queryStartTime: string;
@@ -379,6 +382,7 @@ export default function DataQueryPanel({ configs }: Props) {
           onChartStylesChange={setCurrentChartStyles}
           canSaveStyles={!!currentQueryId}
           onSaveStyles={saveChartStyles}
+          queryName={currentQueryName || undefined}
         />
       </div>
 

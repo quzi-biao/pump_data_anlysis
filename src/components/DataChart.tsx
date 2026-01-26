@@ -13,6 +13,7 @@ interface Props {
   onChartStylesChange?: (styles: any) => void;
   canSaveStyles?: boolean;
   onSaveStyles?: () => void;
+  queryName?: string;
 }
 
 interface LineStyle {
@@ -29,7 +30,7 @@ const DEFAULT_COLORS = [
   '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
 ];
 
-export default function DataChart({ result, chartStyles, onChartStylesChange, canSaveStyles, onSaveStyles }: Props) {
+export default function DataChart({ result, chartStyles, onChartStylesChange, canSaveStyles, onSaveStyles, queryName }: Props) {
   const { data } = result;
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [showSettings, setShowSettings] = useState(false);
@@ -256,6 +257,7 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
           lineStyles={lineStyles} 
           groupStyles={groupStyles}
           backgroundZones={backgroundZones}
+          queryName={queryName}
         />
       ) : (
         <NormalChart 
@@ -263,6 +265,7 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
           chartType={chartType} 
           lineStyles={lineStyles}
           backgroundZones={backgroundZones}
+          queryName={queryName}
         />
       )}
     </div>

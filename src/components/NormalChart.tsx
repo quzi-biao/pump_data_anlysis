@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { AnalysisResult } from '@/types';
 import {
   LineChart,
@@ -14,6 +15,7 @@ import {
   ResponsiveContainer,
   ReferenceArea,
 } from 'recharts';
+import { Download } from 'lucide-react';
 
 interface LineStyle {
   color: string;
@@ -33,10 +35,12 @@ interface Props {
   chartType: 'line' | 'bar';
   lineStyles?: Record<string, LineStyle>;
   backgroundZones?: BackgroundZone[];
+  queryName?: string;
 }
 
-export default function NormalChart({ result, chartType, lineStyles, backgroundZones = [] }: Props) {
+export default function NormalChart({ result, chartType, lineStyles, backgroundZones = [], queryName }: Props) {
   const { data, config } = result;
+  const chartRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // 获取所有数值列（排除时间戳）
   const numericColumns = Object.keys(data[0] || {}).filter(
@@ -67,11 +71,47 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
     displayTime: formatTimestamp(row.timestamp as string),
   }));
 
+  // 导出单个图表为PNG
+  const exportChartToPNG = async (column: string) => {
+    const chartElement = chartRefs.current[column];
+    if (!chartElement) return;
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(chartElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+      });
+
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = queryName 
+        ? `${queryName}_${column}_${timestamp}.png`
+        : `${column}_${timestamp}.png`;
+      
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error('导出PNG失败:', error);
+      alert('导出失败，请重试');
+    }
+  };
+
   return (
     <div className="space-y-8">
       {numericColumns.map((column, index) => (
-        <div key={column} className="border rounded-lg p-4">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">{column}</h3>
+        <div key={column} className="border rounded-lg p-4" ref={(el) => { chartRefs.current[column] = el; }}>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">{column}</h3>
+            <button
+              onClick={() => exportChartToPNG(column)}
+              className="px-2 py-1 text-xs rounded flex items-center bg-green-600 text-white hover:bg-green-700"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              保存PNG
+            </button>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             {chartType === 'line' ? (
               <LineChart data={chartData}>

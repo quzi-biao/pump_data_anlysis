@@ -14,9 +14,10 @@ interface Props {
   onChartStylesChange?: (styles: any) => void;
   canSaveStyles?: boolean;
   onSaveStyles?: () => void;
+  queryName?: string;
 }
 
-export default function QueryResult({ result, error, chartStyles, onExportCSV, onChartStylesChange, canSaveStyles, onSaveStyles }: Props) {
+export default function QueryResult({ result, error, chartStyles, onExportCSV, onChartStylesChange, canSaveStyles, onSaveStyles, queryName }: Props) {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   if (error) {
@@ -110,6 +111,7 @@ export default function QueryResult({ result, error, chartStyles, onExportCSV, o
           onChartStylesChange={onChartStylesChange}
           canSaveStyles={canSaveStyles}
           onSaveStyles={onSaveStyles}
+          queryName={queryName}
         />
       )}
     </div>
