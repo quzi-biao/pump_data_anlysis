@@ -88,7 +88,7 @@ export default function ComparisonChart({ result, chartType }: Props) {
         if (groupDayData) {
           // 将该组的所有指标数据添加到这一天的记录中
           numericColumns.forEach(column => {
-            dayData[`${column}_${group}`] = groupDayData[column];
+            dayData[`${column}_${group}`] = (groupDayData as any)[column];
           });
         }
       });
