@@ -31,7 +31,7 @@ export default function SavedQueriesList({ queries, configs, onLoad, onQueryDire
         <Bookmark className="w-4 h-4 mr-2" />
         已保存的查询
       </h3>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2">
         {queries.map((query) => {
           const config = configs.find(c => c.id === query.configId);
           return (
@@ -40,7 +40,7 @@ export default function SavedQueriesList({ queries, configs, onLoad, onQueryDire
               className="border rounded-lg p-2 hover:shadow-md transition-shadow"
             >
               <div className="flex justify-between items-start mb-1.5">
-                <h4 className="font-medium text-xs text-gray-900 truncate flex-1 mr-1">{query.name}</h4>
+                <h3 className="font-medium text-sm text-gray-900 truncate flex-1 mr-1">{query.name}</h3>
                 <button
                   onClick={() => onDelete(query.id)}
                   className="text-red-600 hover:bg-red-50 p-0.5 rounded flex-shrink-0"

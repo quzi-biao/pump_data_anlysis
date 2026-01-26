@@ -109,15 +109,135 @@ export function mergeDataPoints(
 }
 
 /**
+ * 检测扩展指标的依赖关系
+ * 返回指标名称到其依赖的指标名称列表的映射
+ */
+function detectExtendedIndicatorDependencies(
+  extendedIndicators: ExtendedIndicator[],
+  baseIndicatorNames: Set<string>
+): Map<string, Set<string>> {
+  const dependencies = new Map<string, Set<string>>();
+  const extendedIndicatorNames = new Set(extendedIndicators.map(ind => ind.name));
+  
+  extendedIndicators.forEach(indicator => {
+    const deps = new Set<string>();
+    
+    // 移除公式中的空格
+    const formula = indicator.formula.replace(/\s/g, '');
+    
+    // 检查公式中使用了哪些指标（基础指标或其他扩展指标）
+    // 按名称长度降序排序，避免短名称被优先匹配
+    const allIndicatorNames = [...baseIndicatorNames, ...extendedIndicatorNames];
+    const sortedNames = allIndicatorNames.sort((a, b) => b.length - a.length);
+    
+    sortedNames.forEach(name => {
+      if (name !== indicator.name) {
+        const cleanName = name.replace(/\s/g, '');
+        const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedName);
+        
+        if (regex.test(formula)) {
+          // 只记录对其他扩展指标的依赖
+          if (extendedIndicatorNames.has(name)) {
+            deps.add(name);
+          }
+        }
+      }
+    });
+    
+    dependencies.set(indicator.name, deps);
+  });
+  
+  return dependencies;
+}
+
+/**
+ * 拓扑排序：根据依赖关系对扩展指标排序
+ * 返回排序后的扩展指标数组，确保被依赖的指标先计算
+ */
+function topologicalSortExtendedIndicators(
+  extendedIndicators: ExtendedIndicator[],
+  dependencies: Map<string, Set<string>>
+): ExtendedIndicator[] {
+  const sorted: ExtendedIndicator[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const indicatorMap = new Map(extendedIndicators.map(ind => [ind.name, ind]));
+  
+  function visit(name: string): boolean {
+    if (visited.has(name)) return true;
+    if (visiting.has(name)) {
+      // 检测到循环依赖
+      console.error(`Circular dependency detected involving indicator: ${name}`);
+      return false;
+    }
+    
+    visiting.add(name);
+    
+    const deps = dependencies.get(name) || new Set();
+    for (const dep of deps) {
+      if (!visit(dep)) {
+        return false;
+      }
+    }
+    
+    visiting.delete(name);
+    visited.add(name);
+    
+    const indicator = indicatorMap.get(name);
+    if (indicator) {
+      sorted.push(indicator);
+    }
+    
+    return true;
+  }
+  
+  // 访问所有扩展指标
+  for (const indicator of extendedIndicators) {
+    if (!visited.has(indicator.name)) {
+      if (!visit(indicator.name)) {
+        // 如果有循环依赖，返回原始顺序
+        console.error('Circular dependency detected, using original order');
+        return extendedIndicators;
+      }
+    }
+  }
+  
+  return sorted;
+}
+
+/**
  * 处理分析数据，计算所有扩展指标
  */
 export function processAnalysisData(
   baseDataMap: Map<string, DataPoint[]>,
   extendedIndicators: ExtendedIndicator[],
-  visibleIndicators?: Set<string>
+  visibleIndicators?: Set<string>,
+  extendedDataMap?: Map<string, DataPoint[]>
 ): AnalysisDataRow[] {
   // 合并基础指标数据
   const timeSeriesMap = mergeDataPoints(baseDataMap);
+  
+  // 如果有扩展指标的导入数据，也合并进时间序列
+  if (extendedDataMap && extendedDataMap.size > 0) {
+    extendedDataMap.forEach((dataPoints, indicatorName) => {
+      dataPoints.forEach((point) => {
+        const timestamp = new Date(point.time).toISOString();
+        
+        if (!timeSeriesMap.has(timestamp)) {
+          timeSeriesMap.set(timestamp, new Map());
+        }
+        
+        // 将导入数据添加到时间序列，使用特殊前缀标记为导入数据
+        timeSeriesMap.get(timestamp)!.set(`__imported_${indicatorName}`, point.value);
+      });
+    });
+  }
+  
+  // 检测扩展指标之间的依赖关系并排序
+  const baseIndicatorNames = new Set(baseDataMap.keys());
+  const dependencies = detectExtendedIndicatorDependencies(extendedIndicators, baseIndicatorNames);
+  const sortedExtendedIndicators = topologicalSortExtendedIndicators(extendedIndicators, dependencies);
   
   const rows: AnalysisDataRow[] = [];
 
@@ -129,21 +249,37 @@ export function processAnalysisData(
 
     // 只添加可见的基础指标到结果行
     indicatorValues.forEach((value, name) => {
-      if (!visibleIndicators || visibleIndicators.has(name)) {
-        row[name] = value;
+      // 跳过导入数据的临时标记
+      if (!name.startsWith('__imported_')) {
+        if (!visibleIndicators || visibleIndicators.has(name)) {
+          row[name] = value;
+        }
       }
     });
 
-    // 计算扩展指标
-    extendedIndicators.forEach((extIndicator) => {
+    // 按依赖顺序计算扩展指标
+    sortedExtendedIndicators.forEach((extIndicator) => {
       // 使用名称映射进行计算
       const calculatedValue = calculateExtendedIndicator(
         extIndicator.formula,
         indicatorValues
       );
       
-      if (calculatedValue !== null) {
-        row[extIndicator.name] = calculatedValue;
+      // 检查是否有导入数据
+      const importedValue = indicatorValues.get(`__imported_${extIndicator.name}`);
+      
+      // 合并计算值和导入值：优先使用导入值
+      let finalValue: number | null = null;
+      if (importedValue !== undefined) {
+        finalValue = importedValue;
+      } else if (calculatedValue !== null) {
+        finalValue = calculatedValue;
+      }
+      
+      if (finalValue !== null) {
+        // 将计算结果添加到 indicatorValues 中，供后续扩展指标使用
+        indicatorValues.set(extIndicator.name, finalValue);
+        row[extIndicator.name] = finalValue;
       }
     });
 

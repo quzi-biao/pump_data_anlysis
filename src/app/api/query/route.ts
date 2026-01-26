@@ -2,7 +2,96 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { queryIndicatorData } from '@/lib/influxdb';
 import { processAnalysisData, groupByMonth, groupByDay } from '@/lib/calculator';
-import { AnalysisConfig, QueryParams, AnalysisResult, ApiResponse, DataPoint } from '@/types';
+import { AnalysisConfig, QueryParams, AnalysisResult, ApiResponse, DataPoint, TimeDimension, AggregationType } from '@/types';
+
+// 合并两个数据源的数据点，按时间戳对齐
+function mergeDataPoints(influxData: DataPoint[], importedData: DataPoint[]): DataPoint[] {
+  // 创建时间到数据点的映射
+  const dataMap = new Map<string, { influx?: number; imported?: number }>();
+  
+  // 添加 InfluxDB 数据
+  influxData.forEach(point => {
+    dataMap.set(point.time, { influx: point.value });
+  });
+  
+  // 添加导入数据
+  importedData.forEach(point => {
+    const existing = dataMap.get(point.time);
+    if (existing) {
+      existing.imported = point.value;
+    } else {
+      dataMap.set(point.time, { imported: point.value });
+    }
+  });
+  
+  // 合并数据：优先使用导入数据，如果没有则使用 InfluxDB 数据
+  const mergedData: DataPoint[] = [];
+  dataMap.forEach((values, time) => {
+    // 如果两个数据源都有值，优先使用导入数据
+    const value = values.imported !== undefined ? values.imported : values.influx;
+    if (value !== undefined) {
+      mergedData.push({ time, value });
+    }
+  });
+  
+  // 按时间排序
+  mergedData.sort((a, b) => a.time.localeCompare(b.time));
+  
+  return mergedData;
+}
+
+// 从 MySQL 导入表查询数据
+async function queryImportedData(
+  label: string,
+  startTime: string,
+  endTime: string,
+  timeDimension: TimeDimension,
+  aggregation: AggregationType
+): Promise<DataPoint[]> {
+  // 根据时间维度选择对应的表
+  const tableName = timeDimension === 'day' 
+    ? 'data_daily_import' 
+    : timeDimension === 'hour' 
+    ? 'data_hour_import' 
+    : 'data_import';
+
+  // 构建聚合查询
+  const aggFunc = aggregation === 'max' ? 'MAX' : aggregation === 'min' ? 'MIN' : 'AVG';
+  
+  // 根据时间维度确定时间格式和分组
+  let timeFormat: string;
+  let groupBy: string;
+  
+  if (timeDimension === 'day') {
+    timeFormat = '%Y-%m-%d';
+    groupBy = 'DATE(timestamp)';
+  } else if (timeDimension === 'hour') {
+    timeFormat = '%Y-%m-%d %H:00:00';
+    groupBy = 'DATE_FORMAT(timestamp, "%Y-%m-%d %H:00:00")';
+  } else {
+    timeFormat = '%Y-%m-%d %H:%i:00';
+    groupBy = 'DATE_FORMAT(timestamp, "%Y-%m-%d %H:%i:00")';
+  }
+
+  const sql = `
+    SELECT 
+      DATE_FORMAT(timestamp, '${timeFormat}') as time,
+      ${aggFunc}(value) as value
+    FROM ${tableName}
+    WHERE label1 = ?
+      AND timestamp >= ?
+      AND timestamp <= ?
+    GROUP BY ${groupBy}
+    ORDER BY timestamp ASC
+  `;
+
+  const results = await query<any[]>(sql, [label, startTime, endTime]);
+
+  return results.map(row => ({
+    time: row.time,
+    value: row.value,
+  }));
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,13 +129,40 @@ export async function POST(request: NextRequest) {
     
     await Promise.all(
       config.baseIndicators.map(async (indicator) => {
-        const data = await queryIndicatorData(
-          indicator.indicator_id,
-          params.startTime,
-          params.endTime,
-          config.timeDimension,
-          indicator.aggregation || 'avg'
-        );
+        let data: DataPoint[];
+        
+        // 如果指标有关联标签，同时从 InfluxDB 和 MySQL 导入表查询数据，然后合并
+        if (indicator.label) {
+          const [influxData, importedData] = await Promise.all([
+            queryIndicatorData(
+              indicator.indicator_id,
+              params.startTime,
+              params.endTime,
+              config.timeDimension,
+              indicator.aggregation || 'avg'
+            ),
+            queryImportedData(
+              indicator.label,
+              params.startTime,
+              params.endTime,
+              config.timeDimension,
+              indicator.aggregation || 'avg'
+            )
+          ]);
+          
+          // 合并两个数据源的数据
+          data = mergeDataPoints(influxData, importedData);
+        } else {
+          // 否则只从 InfluxDB 查询数据
+          data = await queryIndicatorData(
+            indicator.indicator_id,
+            params.startTime,
+            params.endTime,
+            config.timeDimension,
+            indicator.aggregation || 'avg'
+          );
+        }
+        
         // 使用指标名称作为键存储数据
         dataMapByName.set(indicator.name, data);
         
@@ -57,11 +173,29 @@ export async function POST(request: NextRequest) {
       })
     );
 
+    // 查询扩展指标的导入数据（如果有关联标签）
+    const extendedDataMap = new Map<string, DataPoint[]>();
+    await Promise.all(
+      config.extendedIndicators.map(async (indicator) => {
+        if (indicator.label) {
+          const data = await queryImportedData(
+            indicator.label,
+            params.startTime,
+            params.endTime,
+            config.timeDimension,
+            'avg' // 扩展指标使用均值聚合
+          );
+          extendedDataMap.set(indicator.name, data);
+        }
+      })
+    );
+
     // 处理数据并计算扩展指标
     let processedData = processAnalysisData(
       dataMapByName,
       config.extendedIndicators,
-      visibleIndicators
+      visibleIndicators,
+      extendedDataMap
     );
 
     // 根据对比类型处理数据

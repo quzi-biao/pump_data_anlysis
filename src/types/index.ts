@@ -17,6 +17,7 @@ export interface BaseIndicator {
   indicator_id: string; // InfluxDB 中的指标 ID
   aggregation?: AggregationType; // 聚合方式：avg(均值), max(最大值), min(最小值)，默认为均值
   visible?: boolean; // 是否在图表和导出中显示，默认为 true
+  label?: string; // 关联的导入数据标签，如果存在则从 MySQL 导入表查询数据
 }
 
 // 扩展指标（通过运算规则生成）
@@ -25,6 +26,7 @@ export interface ExtendedIndicator {
   name: string;
   formula: string; // 运算公式，例如: "i1 + i2", "i1 / i2 * 100"
   baseIndicators: string[]; // 依赖的基础指标 ID 列表
+  label?: string; // 关联的导入数据标签，如果存在则从 MySQL 查询并与计算结果合并
 }
 
 // 分析配置
