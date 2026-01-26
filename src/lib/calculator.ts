@@ -250,21 +250,63 @@ export function processAnalysisData(
   visibleIndicators?: Set<string>,
   extendedDataMap?: Map<string, DataPoint[]>
 ): AnalysisDataRow[] {
-  // 合并基础指标数据
-  const timeSeriesMap = mergeDataPoints(baseDataMap);
+  // 收集所有时间戳（从所有指标中）
+  const allTimestamps = new Set<string>();
   
-  // 如果有扩展指标的导入数据，也合并进时间序列
+  // 从基础指标收集时间戳
+  baseDataMap.forEach((dataPoints) => {
+    dataPoints.forEach((point) => {
+      allTimestamps.add(new Date(point.time).toISOString());
+    });
+  });
+  
+  // 从扩展指标的导入数据收集时间戳
+  if (extendedDataMap && extendedDataMap.size > 0) {
+    extendedDataMap.forEach((dataPoints) => {
+      dataPoints.forEach((point) => {
+        allTimestamps.add(new Date(point.time).toISOString());
+      });
+    });
+  }
+  
+  console.log(`Total unique timestamps across all indicators: ${allTimestamps.size}`);
+  
+  // 为每个时间戳创建完整的数据映射
+  const timeSeriesMap = new Map<string, Map<string, number>>();
+  
+  // 初始化所有时间戳
+  allTimestamps.forEach(timestamp => {
+    timeSeriesMap.set(timestamp, new Map());
+  });
+  
+  // 填充基础指标数据，缺失的时间点填充 0
+  baseDataMap.forEach((dataPoints, indicatorName) => {
+    const dataByTime = new Map<string, number>();
+    dataPoints.forEach((point) => {
+      dataByTime.set(new Date(point.time).toISOString(), point.value);
+    });
+    
+    // 为所有时间戳设置值（有数据用实际值，无数据用 0）
+    allTimestamps.forEach(timestamp => {
+      const value = dataByTime.get(timestamp) ?? 0;
+      timeSeriesMap.get(timestamp)!.set(indicatorName, value);
+    });
+  });
+  
+  // 填充扩展指标的导入数据
   if (extendedDataMap && extendedDataMap.size > 0) {
     extendedDataMap.forEach((dataPoints, indicatorName) => {
+      const dataByTime = new Map<string, number>();
       dataPoints.forEach((point) => {
-        const timestamp = new Date(point.time).toISOString();
-        
-        if (!timeSeriesMap.has(timestamp)) {
-          timeSeriesMap.set(timestamp, new Map());
+        dataByTime.set(new Date(point.time).toISOString(), point.value);
+      });
+      
+      // 为所有时间戳设置导入数据标记
+      allTimestamps.forEach(timestamp => {
+        const value = dataByTime.get(timestamp);
+        if (value !== undefined) {
+          timeSeriesMap.get(timestamp)!.set(`__imported_${indicatorName}`, value);
         }
-        
-        // 将导入数据添加到时间序列，使用特殊前缀标记为导入数据
-        timeSeriesMap.get(timestamp)!.set(`__imported_${indicatorName}`, point.value);
       });
     });
   }

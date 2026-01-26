@@ -6,7 +6,11 @@ import * as XLSX from 'xlsx';
 function parseDate(dateStr: string, format?: string): Date | null {
   if (!dateStr) return null;
   
-  const str = String(dateStr).trim();
+  // 将所有 Unicode 空白字符（包括韩文空格等）替换为普通空格，然后去除首尾空格
+  const str = String(dateStr)
+    .replace(/[\s\u3164\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' '); // 将多个连续空格合并为一个
   
   const patterns = [
     /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/,
