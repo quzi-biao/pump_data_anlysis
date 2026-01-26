@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  pump-data-analysis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pump-data-analysis
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
