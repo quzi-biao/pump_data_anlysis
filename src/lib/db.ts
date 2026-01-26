@@ -54,6 +54,7 @@ export async function initDatabase() {
       name VARCHAR(255) NOT NULL,
       config_id INT NOT NULL,
       query_params JSON NOT NULL,
+      chart_styles JSON,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_name (name),
       INDEX idx_created_at (created_at),

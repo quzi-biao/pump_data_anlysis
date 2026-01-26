@@ -12,6 +12,7 @@ interface SavedQuery {
     comparisonType: ComparisonType;
     selectedMonths?: string[];
   };
+  chart_styles?: any;
   created_at?: string;
 }
 
@@ -39,7 +40,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, configId, queryParams } = body;
+    const { name, configId, queryParams, chartStyles } = body;
 
     if (!name || !configId || !queryParams) {
       return NextResponse.json(
@@ -49,9 +50,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query<any>(
-      `INSERT INTO saved_queries (name, config_id, query_params) 
-       VALUES (?, ?, ?)`,
-      [name, configId, JSON.stringify(queryParams)]
+      `INSERT INTO saved_queries (name, config_id, query_params, chart_styles) 
+       VALUES (?, ?, ?, ?)`,
+      [name, configId, JSON.stringify(queryParams), chartStyles ? JSON.stringify(chartStyles) : null]
     );
 
     return NextResponse.json({
@@ -62,6 +63,36 @@ export async function POST(request: NextRequest) {
     console.error('Error creating saved query:', error);
     return NextResponse.json(
       { success: false, error: '保存查询失败' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - 更新保存的查询的图表样式
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, chartStyles } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: '缺少查询ID' },
+        { status: 400 }
+      );
+    }
+
+    await query(
+      'UPDATE saved_queries SET chart_styles = ? WHERE id = ?',
+      [chartStyles ? JSON.stringify(chartStyles) : null, id]
+    );
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error('Error updating saved query styles:', error);
+    return NextResponse.json(
+      { success: false, error: '更新样式失败' },
       { status: 500 }
     );
   }

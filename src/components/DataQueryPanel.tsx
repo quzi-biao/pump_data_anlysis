@@ -22,6 +22,8 @@ export default function DataQueryPanel({ configs }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [currentChartStyles, setCurrentChartStyles] = useState<any>(null);
+  const [currentQueryId, setCurrentQueryId] = useState<string | null>(null);
 
   // 从数据库加载已保存的查询
   useEffect(() => {
@@ -38,6 +40,10 @@ export default function DataQueryPanel({ configs }: Props) {
             ? JSON.parse(q.query_params) 
             : q.query_params;
           
+          const chartStyles = q.chart_styles 
+            ? (typeof q.chart_styles === 'string' ? JSON.parse(q.chart_styles) : q.chart_styles)
+            : null;
+          
           return {
             id: q.id.toString(),
             name: q.name,
@@ -46,6 +52,7 @@ export default function DataQueryPanel({ configs }: Props) {
             endTime: params.endTime || '',
             comparisonType: params.comparisonType || 'none',
             selectedMonths: params.selectedMonths || [],
+            chartStyles,
             savedAt: q.created_at,
           };
         });
@@ -83,6 +90,7 @@ export default function DataQueryPanel({ configs }: Props) {
           name,
           configId: selectedConfigId,
           queryParams,
+          chartStyles: currentChartStyles,
         }),
       });
 
@@ -107,11 +115,46 @@ export default function DataQueryPanel({ configs }: Props) {
     setEndTime(query.endTime);
     setComparisonType(query.comparisonType);
     setSelectedMonths(query.selectedMonths || []);
+    setCurrentQueryId(query.id);
+    // 加载保存的图表样式
+    if (query.chartStyles) {
+      setCurrentChartStyles(query.chartStyles);
+    }
+  };
+
+  // 保存图表样式到数据库
+  const saveChartStyles = async () => {
+    if (!currentQueryId) {
+      alert('当前没有关联的已保存查询');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/saved-queries', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentQueryId,
+          chartStyles: currentChartStyles,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('样式已保存');
+        loadSavedQueries(); // 重新加载列表
+      } else {
+        alert('保存失败：' + result.error);
+      }
+    } catch (error) {
+      alert('保存失败');
+      console.error(error);
+    }
   };
 
   // 直接执行已保存的查询
   const queryDirect = async (query: SavedQuery) => {
-    // 先加载查询参数
+    // 先加载查询参数和图表样式
     loadQuery(query);
     
     // 等待状态更新后执行查询
@@ -330,7 +373,11 @@ export default function DataQueryPanel({ configs }: Props) {
         <QueryResult
           result={result}
           error={error}
+          chartStyles={currentChartStyles}
           onExportCSV={exportToCSV}
+          onChartStylesChange={setCurrentChartStyles}
+          canSaveStyles={!!currentQueryId}
+          onSaveStyles={saveChartStyles}
         />
       </div>
 

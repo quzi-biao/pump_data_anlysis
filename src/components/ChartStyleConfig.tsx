@@ -28,9 +28,12 @@ interface Props {
   groupStyles: Record<string, Record<string, GroupStyle>>;
   backgroundZones: BackgroundZone[];
   xAxisRange: { min: number; max: number };
+  canSave?: boolean;
+  isSaving?: boolean;
   onUpdateLineStyle: (column: string, updates: Partial<LineStyle>) => void;
   onUpdateGroupStyle: (column: string, group: string, color: string) => void;
   onUpdateBackgroundZones: (zones: BackgroundZone[]) => void;
+  onSaveStyles?: () => void;
 }
 
 const DEFAULT_COLORS = [
@@ -46,9 +49,12 @@ export default function ChartStyleConfig({
   groupStyles,
   backgroundZones,
   xAxisRange,
+  canSave = false,
+  isSaving = false,
   onUpdateLineStyle,
   onUpdateGroupStyle,
   onUpdateBackgroundZones,
+  onSaveStyles,
 }: Props) {
   const [activeTab, setActiveTab] = useState<'lines' | 'zones'>('lines');
 
@@ -78,27 +84,39 @@ export default function ChartStyleConfig({
   return (
     <div className="bg-gray-50 border rounded p-3">
       {/* Tab Navigation */}
-      <div className="flex gap-2 mb-3">
-        <button
-          onClick={() => setActiveTab('lines')}
-          className={`px-3 py-1 text-xs rounded ${
-            activeTab === 'lines'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100 border'
-          }`}
-        >
-          {hasComparisonGroup ? '对比组样式' : '曲线样式'}
-        </button>
-        <button
-          onClick={() => setActiveTab('zones')}
-          className={`px-3 py-1 text-xs rounded ${
-            activeTab === 'zones'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100 border'
-          }`}
-        >
-          背景区域
-        </button>
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('lines')}
+            className={`px-3 py-1 text-xs rounded ${
+              activeTab === 'lines'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border'
+            }`}
+          >
+            {hasComparisonGroup ? '对比组样式' : '曲线样式'}
+          </button>
+          <button
+            onClick={() => setActiveTab('zones')}
+            className={`px-3 py-1 text-xs rounded ${
+              activeTab === 'zones'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border'
+            }`}
+          >
+            背景区域
+          </button>
+        </div>
+        
+        {canSave && onSaveStyles && (
+          <button
+            onClick={onSaveStyles}
+            disabled={isSaving}
+            className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {isSaving ? '保存中...' : '保存样式'}
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}

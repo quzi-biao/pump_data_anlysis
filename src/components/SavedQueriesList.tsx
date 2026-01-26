@@ -11,6 +11,7 @@ export interface SavedQuery {
   endTime: string;
   comparisonType: ComparisonType;
   selectedMonths?: string[];
+  chartStyles?: any;
   savedAt: string;
 }
 

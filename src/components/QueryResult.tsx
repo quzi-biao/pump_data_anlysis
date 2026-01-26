@@ -9,10 +9,14 @@ import DataChart from './DataChart';
 interface Props {
   result: AnalysisResult | null;
   error: string | null;
+  chartStyles?: any;
   onExportCSV: () => void;
+  onChartStylesChange?: (styles: any) => void;
+  canSaveStyles?: boolean;
+  onSaveStyles?: () => void;
 }
 
-export default function QueryResult({ result, error, onExportCSV }: Props) {
+export default function QueryResult({ result, error, chartStyles, onExportCSV, onChartStylesChange, canSaveStyles, onSaveStyles }: Props) {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   if (error) {
@@ -100,7 +104,13 @@ export default function QueryResult({ result, error, onExportCSV }: Props) {
       {viewMode === 'table' ? (
         <DataTable result={result} />
       ) : (
-        <DataChart result={result} />
+        <DataChart 
+          result={result} 
+          chartStyles={chartStyles} 
+          onChartStylesChange={onChartStylesChange}
+          canSaveStyles={canSaveStyles}
+          onSaveStyles={onSaveStyles}
+        />
       )}
     </div>
   );

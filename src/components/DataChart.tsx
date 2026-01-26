@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AnalysisResult } from '@/types';
 import ComparisonChart from './ComparisonChart';
 import NormalChart from './NormalChart';
@@ -9,6 +9,10 @@ import { Settings } from 'lucide-react';
 
 interface Props {
   result: AnalysisResult;
+  chartStyles?: any;
+  onChartStylesChange?: (styles: any) => void;
+  canSaveStyles?: boolean;
+  onSaveStyles?: () => void;
 }
 
 interface LineStyle {
@@ -25,10 +29,11 @@ const DEFAULT_COLORS = [
   '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
 ];
 
-export default function DataChart({ result }: Props) {
+export default function DataChart({ result, chartStyles, onChartStylesChange, canSaveStyles, onSaveStyles }: Props) {
   const { data } = result;
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [showSettings, setShowSettings] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // 检查是否有对比组
   const hasComparisonGroup = 'comparisonGroup' in (data[0] || {});
@@ -80,21 +85,74 @@ export default function DataChart({ result }: Props) {
   // 背景区域配置
   const [backgroundZones, setBackgroundZones] = useState<BackgroundZone[]>([]);
 
+  // 应用保存的图表样式
+  useEffect(() => {
+    if (chartStyles) {
+      if (chartStyles.lineStyles) setLineStyles(chartStyles.lineStyles);
+      if (chartStyles.groupStyles) setGroupStyles(chartStyles.groupStyles);
+      if (chartStyles.backgroundZones) setBackgroundZones(chartStyles.backgroundZones);
+    }
+  }, [chartStyles]);
+
   const updateLineStyle = (column: string, updates: Partial<LineStyle>) => {
-    setLineStyles(prev => ({
-      ...prev,
-      [column]: { ...prev[column], ...updates }
-    }));
+    const newStyles = {
+      ...lineStyles,
+      [column]: { ...lineStyles[column], ...updates }
+    };
+    setLineStyles(newStyles);
+    
+    // 通知父组件样式已更改
+    if (onChartStylesChange) {
+      onChartStylesChange({
+        lineStyles: newStyles,
+        groupStyles,
+        backgroundZones,
+      });
+    }
   };
 
   const updateGroupStyle = (column: string, group: string, color: string) => {
-    setGroupStyles(prev => ({
-      ...prev,
+    const newStyles = {
+      ...groupStyles,
       [column]: {
-        ...prev[column],
+        ...groupStyles[column],
         [group]: { color }
       }
-    }));
+    };
+    setGroupStyles(newStyles);
+    
+    // 通知父组件样式已更改
+    if (onChartStylesChange) {
+      onChartStylesChange({
+        lineStyles,
+        groupStyles: newStyles,
+        backgroundZones,
+      });
+    }
+  };
+
+  const updateBackgroundZones = (zones: BackgroundZone[]) => {
+    setBackgroundZones(zones);
+    
+    // 通知父组件样式已更改
+    if (onChartStylesChange) {
+      onChartStylesChange({
+        lineStyles,
+        groupStyles,
+        backgroundZones: zones,
+      });
+    }
+  };
+
+  const handleSaveStyles = async () => {
+    if (onSaveStyles) {
+      setIsSaving(true);
+      try {
+        await onSaveStyles();
+      } finally {
+        setIsSaving(false);
+      }
+    }
   };
 
   if (data.length === 0) {
@@ -158,9 +216,12 @@ export default function DataChart({ result }: Props) {
           groupStyles={groupStyles}
           backgroundZones={backgroundZones}
           xAxisRange={xAxisRange}
+          canSave={canSaveStyles}
+          isSaving={isSaving}
           onUpdateLineStyle={updateLineStyle}
           onUpdateGroupStyle={updateGroupStyle}
-          onUpdateBackgroundZones={setBackgroundZones}
+          onUpdateBackgroundZones={updateBackgroundZones}
+          onSaveStyles={handleSaveStyles}
         />
       )}
 
