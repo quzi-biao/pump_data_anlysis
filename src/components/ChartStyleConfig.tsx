@@ -18,6 +18,7 @@ export interface BackgroundZone {
   end: number;
   color: string;
   label: string;
+  showAverage?: boolean;
 }
 
 interface Props {
@@ -216,7 +217,7 @@ export default function ChartStyleConfig({
             <div className="space-y-2">
               {backgroundZones.map((zone) => (
                 <div key={zone.id} className="bg-white border rounded p-2">
-                  <div className="grid grid-cols-5 gap-2 items-center">
+                  <div className="grid grid-cols-5 gap-2 items-center mb-2">
                     <input
                       type="text"
                       value={zone.label}
@@ -258,6 +259,17 @@ export default function ChartStyleConfig({
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                  </div>
+                  <div className="flex items-center gap-2 pl-2">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={zone.showAverage || false}
+                        onChange={(e) => updateZone(zone.id, { showAverage: e.target.checked })}
+                        className="w-3 h-3 rounded"
+                      />
+                      <span className="text-xs text-gray-700">显示区域平均值线</span>
+                    </label>
                   </div>
                 </div>
               ))}

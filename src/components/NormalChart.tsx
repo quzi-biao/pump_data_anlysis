@@ -14,6 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceArea,
+  ReferenceLine,
 } from 'recharts';
 import { Download } from 'lucide-react';
 
@@ -28,6 +29,7 @@ interface BackgroundZone {
   end: number;
   color: string;
   label: string;
+  showAverage?: boolean; // 是否显示区域内的平均值线
 }
 
 interface Props {
@@ -65,11 +67,60 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
     }
   };
 
+  // 移除异常大值和小值的函数（使用IQR方法）
+  const removeOutliers = (data: any[], column: string) => {
+    const values = data
+      .map(row => row[column])
+      .filter(val => typeof val === 'number' && !isNaN(val))
+      .sort((a, b) => a - b);
+    
+    if (values.length < 4) return data; // 数据太少，不过滤
+    
+    // 计算四分位数
+    const q1Index = Math.floor(values.length * 0.25);
+    const q3Index = Math.floor(values.length * 0.75);
+    const q1 = values[q1Index];
+    const q3 = values[q3Index];
+    const iqr = q3 - q1;
+    
+    // 定义异常值边界（上下界都过滤，系数为5）
+    const lowerBound = q1 - 50 * iqr;
+    const upperBound = q3 + 50 * iqr;
+    
+    // 过滤异常值
+    return data.map(row => {
+      const value = row[column];
+      if (typeof value === 'number' && (value < lowerBound || value > upperBound)) {
+        // 将异常值替换为null，这样图表会跳过这个点
+        return { ...row, [column]: null };
+      }
+      return row;
+    });
+  };
+
   // 准备图表数据
-  const chartData = data.map(row => ({
+  let chartData = data.map(row => ({
     ...row,
     displayTime: formatTimestamp(row.timestamp as string),
   }));
+  
+  // 对每个数值列移除异常值
+  numericColumns.forEach(column => {
+    chartData = removeOutliers(chartData, column);
+  });
+
+  // 计算每个区域每个指标的平均值
+  const calculateZoneAverage = (column: string, zone: BackgroundZone): number | null => {
+    const zoneData = chartData.slice(zone.start, zone.end + 1);
+    const values = zoneData
+      .map(row => row[column])
+      .filter(val => typeof val === 'number' && !isNaN(val) && val !== null);
+    
+    if (values.length === 0) return null;
+    
+    const sum = values.reduce((acc, val) => acc + val, 0);
+    return sum / values.length;
+  };
 
   // 导出单个图表为PNG
   const exportChartToPNG = async (column: string) => {
@@ -143,6 +194,33 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                     label={{ value: zone.label, position: 'top', fontSize: 10 }}
                   />
                 ))}
+                {/* Zone Average Lines */}
+                {backgroundZones.map((zone) => {
+                  if (!zone.showAverage) return null;
+                  const avg = calculateZoneAverage(column, zone);
+                  if (avg === null) return null;
+                  
+                  return (
+                    <ReferenceLine
+                      key={`${zone.id}-avg`}
+                      y={avg}
+                      stroke={zone.color}
+                      strokeDasharray="5 5"
+                      strokeWidth={2}
+                      label={{
+                        value: `${zone.label} 平均: ${avg.toFixed(2)}`,
+                        position: 'insideTopRight',
+                        fontSize: 11,
+                        fill: '#000000',
+                        fontWeight: 'bold',
+                      }}
+                      segment={[
+                        { x: chartData[zone.start]?.displayTime, y: avg },
+                        { x: chartData[zone.end]?.displayTime, y: avg }
+                      ]}
+                    />
+                  );
+                })}
                   <Line
                     type="monotone"
                     dataKey={column}
@@ -181,6 +259,33 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                       label={{ value: zone.label, position: 'top', fontSize: 10 }}
                     />
                   ))}
+                  {/* Zone Average Lines */}
+                  {backgroundZones.map((zone) => {
+                    if (!zone.showAverage) return null;
+                    const avg = calculateZoneAverage(column, zone);
+                    if (avg === null) return null;
+                    
+                    return (
+                      <ReferenceLine
+                        key={`${zone.id}-avg`}
+                        y={avg}
+                        stroke={zone.color}
+                        strokeDasharray="5 5"
+                        strokeWidth={2}
+                        label={{
+                          value: `${zone.label} 平均: ${avg.toFixed(2)}`,
+                          position: 'insideTopRight',
+                          fontSize: 11,
+                          fill: '#000000',
+                          fontWeight: 'bold',
+                        }}
+                        segment={[
+                          { x: chartData[zone.start]?.displayTime, y: avg },
+                          { x: chartData[zone.end]?.displayTime, y: avg }
+                        ]}
+                      />
+                    );
+                  })}
                   <Bar
                     dataKey={column}
                     fill={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}

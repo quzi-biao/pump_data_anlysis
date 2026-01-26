@@ -77,7 +77,7 @@ export function calculateExtendedIndicator(
 /**
  * 安全地计算数学表达式
  */
-function evaluateExpression(expression: string): number {
+function evaluateExpression(expression: string): number | null {
   // 移除所有空格
   expression = expression.replace(/\s/g, '');
   
@@ -90,8 +90,9 @@ function evaluateExpression(expression: string): number {
   const func = new Function('return ' + expression);
   const result = func();
   
+  // 如果结果不是有限数字（如 Infinity、NaN），返回 null
   if (typeof result !== 'number' || !isFinite(result)) {
-    throw new Error('Invalid calculation result');
+    return null;
   }
   
   return result;
@@ -342,25 +343,13 @@ export function processAnalysisData(
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
-  console.log(`Total rows generated (before filtering): ${rows.length}`);
-  
-  // 过滤掉只有压力数据的行（至少要有一个非压力指标）
-  const filteredRows = rows.filter(row => {
-    const keys = Object.keys(row);
-    // 检查是否有非timestamp和非压力的指标
-    const hasNonPressureData = keys.some(key => 
-      key !== 'timestamp' && !key.includes('末端压力')
-    );
-    return hasNonPressureData;
-  });
-  
-  console.log(`Total rows after filtering: ${filteredRows.length}`);
-  if (filteredRows.length > 0) {
-    console.log('First row columns:', Object.keys(filteredRows[0]));
-    console.log('First row sample:', filteredRows[0]);
+  console.log(`Total rows generated: ${rows.length}`);
+  if (rows.length > 0) {
+    console.log('First row columns:', Object.keys(rows[0]));
+    console.log('First row sample:', rows[0]);
   }
 
-  return filteredRows;
+  return rows;
 }
 
 /**

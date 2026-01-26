@@ -147,7 +147,14 @@ export async function queryPressureData(
         reject(error);
       },
       complete() {
+        // 按时间排序
+        dataPoints.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+        
         console.log(`Pressure query complete for SN ${sn}: ${dataPoints.length} points`);
+        if (dataPoints.length > 0) {
+          console.log('First 3 pressure data points:', dataPoints.slice(0, 3).map(p => ({ time: new Date(p.time).toISOString(), value: p.value })));
+          console.log('Last 3 pressure data points:', dataPoints.slice(-3).map(p => ({ time: new Date(p.time).toISOString(), value: p.value })));
+        }
         resolve(dataPoints);
       },
     });

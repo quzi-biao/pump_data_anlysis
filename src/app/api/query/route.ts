@@ -85,12 +85,44 @@ async function queryImportedData(
     ORDER BY timestamp ASC
   `;
 
+  console.log(`\n=== Querying imported data ===`);
+  console.log(`Label: "${label}"`);
+  console.log(`Table: ${tableName}`);
+  console.log(`Time range: ${startTime} to ${endTime}`);
+  console.log(`Aggregation: ${aggregation} (${aggFunc})`);
+  console.log(`SQL: ${sql}`);
+  console.log(`Parameters: [${label}, ${startTime}, ${endTime}]`);
+  
   const results = await query<any[]>(sql, [label, startTime, endTime]);
+  
+  console.log(`Query result: ${results.length} points`);
+  if (results.length > 0) {
+    console.log('First 3 points:', results.slice(0, 3));
+    console.log('Last 3 points:', results.slice(-3));
+  } else {
+    console.log('No data found - check if label1, timestamp range, or table is correct');
+  }
 
-  return results.map(row => ({
-    time: row.time,
-    value: row.value,
-  }));
+  // 将时间格式转换为 ISO 格式以匹配 InfluxDB 数据
+  return results.map(row => {
+    // MySQL 返回的时间格式如 '2025-11-01' 或 '2025-11-01 12:00:00'
+    // 需要转换为 ISO 格式 '2025-11-01T00:00:00.000Z'
+    const timeStr = row.time;
+    let isoTime: string;
+    
+    if (timeStr.includes(' ')) {
+      // 格式：'2025-11-01 12:00:00'
+      isoTime = new Date(timeStr.replace(' ', 'T') + 'Z').toISOString();
+    } else {
+      // 格式：'2025-11-01'
+      isoTime = new Date(timeStr + 'T00:00:00.000Z').toISOString();
+    }
+    
+    return {
+      time: isoTime,
+      value: row.value,
+    };
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -152,6 +184,8 @@ export async function POST(request: NextRequest) {
         }
         // 如果指标有关联标签，同时从 InfluxDB 和 MySQL 导入表查询数据，然后合并
         else if (indicator.label) {
+          console.log(`\n=== Indicator "${indicator.name}" has label: "${indicator.label}" ===`);
+          
           const [influxData, importedData] = await Promise.all([
             queryIndicatorData(
               indicator.indicator_id,
@@ -169,8 +203,13 @@ export async function POST(request: NextRequest) {
             )
           ]);
           
+          console.log(`InfluxDB data: ${influxData.length} points`);
+          console.log(`MySQL imported data: ${importedData.length} points`);
+          
           // 合并两个数据源的数据
           data = mergeDataPoints(influxData, importedData);
+          
+          console.log(`Merged data: ${data.length} points`);
         } else {
           // 否则只从 InfluxDB 查询数据
           data = await queryIndicatorData(
