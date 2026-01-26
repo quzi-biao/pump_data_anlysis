@@ -35,6 +35,7 @@ interface BackgroundZone {
   color: string;
   label: string;
   showAverage?: boolean; // 是否显示区域内的平均值线
+  averageLineColor?: string; // 平均值线的颜色
 }
 
 type ChartType = 'line' | 'bar' | 'area' | 'scatter';
@@ -46,6 +47,7 @@ interface MetricStyle {
   chartType: ChartType;
   visible: boolean;
   chartGroup?: string; // 用于将多个指标组合到同一张图表
+  chartHeight?: number; // 图表高度（像素）
 }
 
 interface Props {
@@ -90,6 +92,7 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
           chartType: 'line',
           visible: true,
           chartGroup: col, // 默认每个指标独立成图
+          chartHeight: 500, // 默认高度
         };
       }
     });
@@ -148,6 +151,7 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
       color: '#e0e0e0',
       label: `区域 ${metricStyles[column].backgroundZones.length + 1}`,
       showAverage: false,
+      averageLineColor: '#ff0000',
     };
     updateMetricStyle(column, {
       backgroundZones: [...metricStyles[column].backgroundZones, newZone]
@@ -368,7 +372,6 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                         <option value="line">折线图</option>
                         <option value="bar">柱状图</option>
                         <option value="area">面积图</option>
-                        <option value="scatter">散点图</option>
                       </select>
                     </div>
                   </div>
@@ -377,34 +380,50 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                 {/* Chart Group */}
                 <div>
                   <div className="text-xs font-medium text-gray-700 mb-2">图表分组 (当前: {currentStyle.chartGroup || column})</div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600">组名:</span>
-                    <input
-                      type="text"
-                      value={localChartGroup[column] ?? (currentStyle.chartGroup || '')}
-                      onChange={(e) => {
-                        setLocalChartGroup(prev => ({
-                          ...prev,
-                          [column]: e.target.value
-                        }));
-                      }}
-                      onBlur={(e) => {
-                        updateMetricStyle(column, { chartGroup: e.target.value || column });
-                        setLocalChartGroup(prev => {
-                          const newState = { ...prev };
-                          delete newState[column];
-                          return newState;
-                        });
-                      }}
-                      onFocus={(e) => {
-                        setLocalChartGroup(prev => ({
-                          ...prev,
-                          [column]: currentStyle.chartGroup || ''
-                        }));
-                      }}
-                      className="px-2 py-1 text-xs border rounded bg-white flex-1"
-                      placeholder={`留空使用默认值: ${column}`}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600">组名:</span>
+                      <input
+                        type="text"
+                        value={localChartGroup[column] ?? (currentStyle.chartGroup || '')}
+                        onChange={(e) => {
+                          setLocalChartGroup(prev => ({
+                            ...prev,
+                            [column]: e.target.value
+                          }));
+                        }}
+                        onBlur={(e) => {
+                          updateMetricStyle(column, { chartGroup: e.target.value || column });
+                          setLocalChartGroup(prev => {
+                            const newState = { ...prev };
+                            delete newState[column];
+                            return newState;
+                          });
+                        }}
+                        onFocus={(e) => {
+                          setLocalChartGroup(prev => ({
+                            ...prev,
+                            [column]: currentStyle.chartGroup || ''
+                          }));
+                        }}
+                        className="px-2 py-1 text-xs border rounded bg-white flex-1"
+                        placeholder={`留空使用默认值: ${column}`}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600">高度:</span>
+                      <input
+                        type="number"
+                        value={currentStyle.chartHeight || 500}
+                        onChange={(e) => updateMetricStyle(column, { chartHeight: Number(e.target.value) })}
+                        className="px-2 py-1 text-xs border rounded bg-white w-20"
+                        placeholder="500"
+                        min={200}
+                        max={1200}
+                        step={50}
+                      />
+                      <span className="text-[10px] text-gray-500">px</span>
+                    </div>
                   </div>
                   <div className="text-[10px] text-gray-500 mt-1">
                     提示：将多个指标设置为相同的组名，它们会合并显示在一张图表中
@@ -460,19 +479,19 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                     <div className="space-y-2">
                       {currentStyle.backgroundZones.map((zone) => (
                         <div key={zone.id} className="bg-white border rounded p-2">
-                          <div className="grid grid-cols-5 gap-2 items-center mb-2">
+                          <div className="flex gap-2 items-center">
                             <input
                               type="text"
                               value={zone.label}
                               onChange={(e) => updateZone(column, zone.id, { label: e.target.value })}
-                              className="px-2 py-1 text-xs border rounded"
+                              className="px-2 py-1 text-xs border rounded flex-1"
                               placeholder="区域名称"
                             />
                             <input
                               type="number"
                               value={zone.start}
                               onChange={(e) => updateZone(column, zone.id, { start: Number(e.target.value) })}
-                              className="px-2 py-1 text-xs border rounded"
+                              className="px-2 py-1 text-xs border rounded w-20"
                               placeholder="起始"
                               min={0}
                               max={zone.end}
@@ -481,7 +500,7 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                               type="number"
                               value={zone.end}
                               onChange={(e) => updateZone(column, zone.id, { end: Number(e.target.value) })}
-                              className="px-2 py-1 text-xs border rounded"
+                              className="px-2 py-1 text-xs border rounded w-20"
                               placeholder="结束"
                               min={zone.start}
                               max={chartData.length - 1}
@@ -495,24 +514,31 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                                 className="w-8 h-6 rounded cursor-pointer"
                               />
                             </div>
-                            <button
-                              onClick={() => removeZone(column, zone.id)}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded"
-                              title="删除区域"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2 pl-2">
-                            <label className="flex items-center gap-1 cursor-pointer">
+                            <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap" title="显示区域平均值线">
                               <input
                                 type="checkbox"
                                 checked={zone.showAverage || false}
                                 onChange={(e) => updateZone(column, zone.id, { showAverage: e.target.checked })}
                                 className="w-3 h-3 rounded"
                               />
-                              <span className="text-xs text-gray-700">显示区域平均值线</span>
+                              <span className="text-[10px] text-gray-600">平均线</span>
                             </label>
+                            {zone.showAverage && (
+                              <input
+                                type="color"
+                                value={zone.averageLineColor || '#ff0000'}
+                                onChange={(e) => updateZone(column, zone.id, { averageLineColor: e.target.value })}
+                                className="w-8 h-6 rounded cursor-pointer"
+                                title="平均线颜色"
+                              />
+                            )}
+                            <button
+                              onClick={() => removeZone(column, zone.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded flex-shrink-0"
+                              title="删除区域"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -523,8 +549,8 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
             </div>
           );
           })}
-          <div ref={(el) => { chartRefs.current[groupName] = el; }}>
-            <ResponsiveContainer width="100%" height={500}>
+          <div ref={(el) => { chartRefs.current[groupName] = el; }} className="pt-4">
+            <ResponsiveContainer width="100%" height={metricStyles[columns[0]]?.chartHeight || 500}>
               <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
@@ -532,7 +558,7 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                   tick={{ fontSize: 12 }}
                   angle={-45}
                   textAnchor="end"
-                  height={80}
+                  height={50}
                 />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip
@@ -565,15 +591,16 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                       <ReferenceLine
                         key={`${col}-${zone.id}-avg`}
                         y={avg}
-                        stroke={zone.color}
+                        stroke={zone.averageLineColor || zone.color}
                         strokeDasharray="5 5"
-                        strokeWidth={2}
+                        strokeWidth={3}
                         label={{
                           value: `${col} ${zone.label}: ${avg.toFixed(2)}`,
-                          position: 'insideTopRight',
-                          fontSize: 11,
-                          fill: '#000000',
+                          position: 'top',
+                          fontSize: 12,
+                          fill: zone.averageLineColor || zone.color,
                           fontWeight: 'bold',
+                          style: { zIndex: 1000 },
                         }}
                         segment={[
                           { x: chartData[zone.start]?.displayTime, y: avg },
