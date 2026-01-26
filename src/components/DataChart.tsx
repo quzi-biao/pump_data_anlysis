@@ -4,8 +4,14 @@ import { useState, useMemo, useEffect } from 'react';
 import { AnalysisResult } from '@/types';
 import ComparisonChart from './ComparisonChart';
 import NormalChart from './NormalChart';
-import ChartStyleConfig, { BackgroundZone } from './ChartStyleConfig';
+import { BackgroundZone } from './ChartStyleConfig';
 import { Settings } from 'lucide-react';
+
+interface MetricStyle {
+  color: string;
+  thickness: number;
+  backgroundZones: BackgroundZone[];
+}
 
 interface Props {
   result: AnalysisResult;
@@ -32,9 +38,6 @@ const DEFAULT_COLORS = [
 
 export default function DataChart({ result, chartStyles, onChartStylesChange, canSaveStyles, onSaveStyles, queryName }: Props) {
   const { data } = result;
-  const [chartType, setChartType] = useState<'line' | 'bar'>('line');
-  const [showSettings, setShowSettings] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   // 检查是否有对比组
   const hasComparisonGroup = 'comparisonGroup' in (data[0] || {});
@@ -89,7 +92,22 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
   // 应用保存的图表样式
   useEffect(() => {
     if (chartStyles) {
-      if (chartStyles.lineStyles) setLineStyles(chartStyles.lineStyles);
+      // 处理新的 metricStyles 格式（每个指标独立的样式）
+      if (chartStyles.metricStyles) {
+        const newLineStyles: Record<string, LineStyle> = {};
+        Object.keys(chartStyles.metricStyles).forEach(col => {
+          const metricStyle = chartStyles.metricStyles[col];
+          newLineStyles[col] = {
+            color: metricStyle.color,
+            thickness: metricStyle.thickness
+          };
+        });
+        setLineStyles(newLineStyles);
+      } else if (chartStyles.lineStyles) {
+        // 兼容旧格式
+        setLineStyles(chartStyles.lineStyles);
+      }
+      
       if (chartStyles.groupStyles) setGroupStyles(chartStyles.groupStyles);
       if (chartStyles.backgroundZones) setBackgroundZones(chartStyles.backgroundZones);
     } else {
@@ -117,6 +135,15 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
       setBackgroundZones([]);
     }
   }, [chartStyles, numericColumns, comparisonGroups]);
+
+  // 处理来自 NormalChart 的 metricStyles 更新
+  const handleMetricStylesChange = (metricStyles: Record<string, MetricStyle>) => {
+    if (onChartStylesChange) {
+      onChartStylesChange({
+        metricStyles,
+      });
+    }
+  };
 
   const updateLineStyle = (column: string, updates: Partial<LineStyle>) => {
     const newStyles = {
@@ -168,16 +195,6 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
     }
   };
 
-  const handleSaveStyles = async () => {
-    if (onSaveStyles) {
-      setIsSaving(true);
-      try {
-        await onSaveStyles();
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  };
 
   if (data.length === 0) {
     return (
@@ -189,71 +206,12 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
 
   return (
     <div className="space-y-4">
-      {/* Chart Type Toggle and Settings */}
-      <div className="flex justify-between items-center">
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setChartType('line')}
-            className={`px-3 py-1.5 text-xs rounded ${
-              chartType === 'line'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            折线图
-          </button>
-          <button
-            onClick={() => setChartType('bar')}
-            className={`px-3 py-1.5 text-xs rounded ${
-              chartType === 'bar'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            柱状图
-          </button>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={`px-3 py-1.5 text-xs rounded flex items-center ${
-              showSettings
-                ? 'bg-gray-700 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Settings className="w-3 h-3 mr-1" />
-            样式设置
-          </button>
-        </div>
-
-        <div className="text-xs text-gray-500">
-          共 {numericColumns.length} 个指标
-        </div>
-      </div>
-
-      {/* Style Settings Panel */}
-      {showSettings && (
-        <ChartStyleConfig
-          numericColumns={numericColumns}
-          comparisonGroups={comparisonGroups}
-          hasComparisonGroup={hasComparisonGroup}
-          lineStyles={lineStyles}
-          groupStyles={groupStyles}
-          backgroundZones={backgroundZones}
-          xAxisRange={xAxisRange}
-          canSave={canSaveStyles}
-          isSaving={isSaving}
-          onUpdateLineStyle={updateLineStyle}
-          onUpdateGroupStyle={updateGroupStyle}
-          onUpdateBackgroundZones={updateBackgroundZones}
-          onSaveStyles={handleSaveStyles}
-        />
-      )}
 
       {/* Charts */}
       {hasComparisonGroup ? (
         <ComparisonChart 
           result={result} 
-          chartType={chartType} 
+          chartType={'line'} 
           lineStyles={lineStyles} 
           groupStyles={groupStyles}
           backgroundZones={backgroundZones}
@@ -262,10 +220,13 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
       ) : (
         <NormalChart 
           result={result} 
-          chartType={chartType} 
           lineStyles={lineStyles}
           backgroundZones={backgroundZones}
           queryName={queryName}
+          onStylesChange={handleMetricStylesChange}
+          canSaveStyles={canSaveStyles}
+          onSaveStyles={onSaveStyles}
+          savedMetricStyles={chartStyles?.metricStyles}
         />
       )}
     </div>
