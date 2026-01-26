@@ -78,3 +78,41 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+// 数据导入相关类型
+
+// 导入数据类型（决定导入到哪个表）
+export type ImportDataType = 'minute' | 'hour' | 'day';
+
+// 数据格式（行数据/列数据）
+export type DataFormat = 'row' | 'column';
+
+// 数据标签映射
+export interface LabelMapping {
+  original: string; // 原始标签
+  mapped: string;   // 映射后的标签
+}
+
+// 导入配置
+export interface ImportConfig {
+  id?: number;
+  name: string;
+  description?: string;
+  dataType: ImportDataType; // 数据类型：minute/hour/day
+  startRow: number; // 数据起始行（从1开始）
+  startColumn: number; // 数据起始列（从1开始）
+  dataFormat: DataFormat; // 数据格式：row(日期在第一列) 或 column(日期在第一行)
+  dateFormat?: string; // 日期格式，默认支持 YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD 加上可选的 HH:mm
+  labelMappings: LabelMapping[]; // 标签映射表
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// 导入结果
+export interface ImportResult {
+  success: boolean;
+  inserted: number;
+  updated: number;
+  failed: number;
+  errors?: string[];
+}

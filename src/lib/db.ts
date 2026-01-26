@@ -61,7 +61,78 @@ export async function initDatabase() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `;
 
+  const createImportConfigTable = `
+    CREATE TABLE IF NOT EXISTS import_configs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      data_type ENUM('minute', 'hour', 'day') NOT NULL,
+      start_row INT NOT NULL DEFAULT 1,
+      start_column INT NOT NULL DEFAULT 1,
+      data_format ENUM('row', 'column') NOT NULL DEFAULT 'column',
+      date_format VARCHAR(100),
+      label_mappings JSON NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_name (name),
+      INDEX idx_data_type (data_type),
+      INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `;
+
+  const createDataImportTable = `
+    CREATE TABLE IF NOT EXISTS data_import (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      timestamp DATETIME NOT NULL,
+      label1 VARCHAR(255) NOT NULL,
+      label2 VARCHAR(255),
+      value DOUBLE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY idx_time_label (timestamp, label1),
+      INDEX idx_timestamp (timestamp),
+      INDEX idx_label1 (label1),
+      INDEX idx_label2 (label2)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `;
+
+  const createDataHourImportTable = `
+    CREATE TABLE IF NOT EXISTS data_hour_import (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      timestamp DATETIME NOT NULL,
+      label1 VARCHAR(255) NOT NULL,
+      label2 VARCHAR(255),
+      value DOUBLE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY idx_time_label (timestamp, label1),
+      INDEX idx_timestamp (timestamp),
+      INDEX idx_label1 (label1),
+      INDEX idx_label2 (label2)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `;
+
+  const createDataDailyImportTable = `
+    CREATE TABLE IF NOT EXISTS data_daily_import (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      timestamp DATE NOT NULL,
+      label1 VARCHAR(255) NOT NULL,
+      label2 VARCHAR(255),
+      value DOUBLE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY idx_time_label (timestamp, label1),
+      INDEX idx_timestamp (timestamp),
+      INDEX idx_label1 (label1),
+      INDEX idx_label2 (label2)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `;
+
   await query(createAnalysisConfigTable);
   await query(createSavedQueriesTable);
+  await query(createImportConfigTable);
+  await query(createDataImportTable);
+  await query(createDataHourImportTable);
+  await query(createDataDailyImportTable);
   console.log('Database initialized successfully');
 }
