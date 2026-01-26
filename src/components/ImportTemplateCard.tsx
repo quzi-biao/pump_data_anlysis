@@ -1,7 +1,7 @@
 'use client';
 
 import { ImportConfig } from '@/types';
-import { FileUp, Edit2, Trash2 } from 'lucide-react';
+import { FileUp, Edit2, Trash2, Copy } from 'lucide-react';
 
 interface Props {
   config: ImportConfig;
@@ -9,6 +9,7 @@ interface Props {
   onUse: (config: ImportConfig) => void;
   onEdit: (config: ImportConfig) => void;
   onDelete: (id: number) => void;
+  onCopy: (config: ImportConfig) => void;
 }
 
 const getDataTypeLabel = (type: string) => {
@@ -28,16 +29,25 @@ const getDataFormatLabel = (format: string) => {
   }
 };
 
-export default function ImportTemplateCard({ config, showDelete, onUse, onEdit, onDelete }: Props) {
+export default function ImportTemplateCard({ config, showDelete, onUse, onEdit, onDelete, onCopy }: Props) {
   return (
     <div className="bg-white rounded-lg border p-5 hover:shadow-lg transition-shadow flex flex-col relative">
-      <button
-        onClick={() => onEdit(config)}
-        className="absolute top-3 right-3 p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-        title="编辑"
-      >
-        <Edit2 className="w-4 h-4" />
-      </button>
+      <div className="absolute top-3 right-3 flex gap-1">
+        <button
+          onClick={() => onCopy(config)}
+          className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+          title="复制"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => onEdit(config)}
+          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          title="编辑"
+        >
+          <Edit2 className="w-4 h-4" />
+        </button>
+      </div>
 
       <div className="flex-1 pr-10">
         <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-1">{config.name}</h3>

@@ -50,6 +50,22 @@ export default function DataImportPanel() {
     setFormMode('template');
   };
 
+  const handleCopyTemplate = (config: ImportConfig) => {
+    // 创建模板的副本，移除 id 并修改名称
+    const copiedConfig: Partial<ImportConfig> = {
+      name: `${config.name} - 副本`,
+      description: config.description,
+      dataType: config.dataType,
+      startRow: config.startRow,
+      startColumn: config.startColumn,
+      dataFormat: config.dataFormat,
+      dateFormat: config.dateFormat,
+      labelMappings: JSON.parse(JSON.stringify(config.labelMappings)),
+    };
+    setEditingConfig(copiedConfig);
+    setFormMode('template');
+  };
+
   const handleUseTemplate = (config: ImportConfig) => {
     setEditingConfig(config);
     setFormMode('import');
@@ -148,6 +164,7 @@ export default function DataImportPanel() {
                 onUse={handleUseTemplate}
                 onEdit={handleEditTemplate}
                 onDelete={handleDeleteTemplate}
+                onCopy={handleCopyTemplate}
               />
             ))
           )}
