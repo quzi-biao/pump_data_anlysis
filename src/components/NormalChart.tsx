@@ -225,6 +225,17 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
   numericColumns.forEach(column => {
     chartData = removeOutliers(chartData, column);
   });
+  
+  // 过滤0值点，将0替换为null使其不在曲线上显示
+  chartData = chartData.map(row => {
+    const newRow = { ...row };
+    numericColumns.forEach(column => {
+      if (newRow[column] === 0) {
+        newRow[column] = null;
+      }
+    });
+    return newRow;
+  });
 
   // 计算每个区域每个指标的平均值
   const calculateZoneAverage = (column: string, zone: BackgroundZone): number | null => {
