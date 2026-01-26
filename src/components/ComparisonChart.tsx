@@ -14,12 +14,23 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+interface LineStyle {
+  color: string;
+  thickness: number;
+}
+
+interface GroupStyle {
+  color: string;
+}
+
 interface Props {
   result: AnalysisResult;
   chartType: 'line' | 'bar';
+  lineStyles?: Record<string, LineStyle>;
+  groupStyles?: Record<string, Record<string, GroupStyle>>;
 }
 
-export default function ComparisonChart({ result, chartType }: Props) {
+export default function ComparisonChart({ result, chartType, lineStyles, groupStyles }: Props) {
   const { data, config } = result;
 
   // 获取所有数值列（排除时间戳和对比组）
@@ -27,8 +38,8 @@ export default function ComparisonChart({ result, chartType }: Props) {
     key => key !== 'timestamp' && key !== 'comparisonGroup' && typeof data[0][key] === 'number'
   );
 
-  // 颜色方案
-  const colors = [
+  // 默认颜色方案
+  const defaultColors = [
     '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
     '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
   ];
@@ -136,6 +147,10 @@ export default function ComparisonChart({ result, chartType }: Props) {
                     ? `${column}_${group}`
                     : column;
                   
+                  // 获取该组的颜色（优先使用 groupStyles，否则使用默认颜色）
+                  const groupColor = groupStyles?.[column]?.[group as string]?.color || defaultColors[groupIndex % defaultColors.length];
+                  const strokeWidth = lineStyles?.[column]?.thickness || 2;
+                  
                   // 按月对比时不使用 data 属性，让所有线条共享 LineChart 的数据
                   if (result.comparisonType === 'month' && config.timeDimension === 'day') {
                     return (
@@ -143,10 +158,10 @@ export default function ComparisonChart({ result, chartType }: Props) {
                         key={group}
                         type="monotone"
                         dataKey={dataKey}
-                        stroke={colors[groupIndex % colors.length]}
+                        stroke={groupColor}
                         name={`${group}`}
                         dot={false}
-                        strokeWidth={2}
+                        strokeWidth={strokeWidth}
                         connectNulls={true}
                       />
                     );
@@ -159,10 +174,10 @@ export default function ComparisonChart({ result, chartType }: Props) {
                         data={lineData}
                         type="monotone"
                         dataKey={dataKey}
-                        stroke={colors[groupIndex % colors.length]}
+                        stroke={groupColor}
                         name={`${group}`}
                         dot={false}
-                        strokeWidth={2}
+                        strokeWidth={strokeWidth}
                         connectNulls={true}
                       />
                     );
@@ -193,11 +208,14 @@ export default function ComparisonChart({ result, chartType }: Props) {
                     ? `${column}_${group}`
                     : column;
                   
+                  // 获取该组的颜色（优先使用 groupStyles，否则使用默认颜色）
+                  const groupColor = groupStyles?.[column]?.[group as string]?.color || defaultColors[groupIndex % defaultColors.length];
+                  
                   return (
                     <Bar
                       key={group}
                       dataKey={dataKey}
-                      fill={colors[groupIndex % colors.length]}
+                      fill={groupColor}
                       name={`${group}`}
                     />
                   );

@@ -64,31 +64,31 @@ export default function QueryResult({ result, error, onExportCSV }: Props) {
         <div className="flex space-x-2">
           <button
             onClick={() => setViewMode('table')}
-            className={`flex items-center px-4 py-2 rounded-lg ${
+            className={`flex items-center px-3 py-1.5 text-xs rounded ${
               viewMode === 'table'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            <TableIcon className="w-4 h-4 mr-2" />
+            <TableIcon className="w-3 h-3 mr-1" />
             表格
           </button>
           <button
             onClick={() => setViewMode('chart')}
-            className={`flex items-center px-4 py-2 rounded-lg ${
+            className={`flex items-center px-3 py-1.5 text-xs rounded ${
               viewMode === 'chart'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            <BarChart3 className="w-4 h-4 mr-2" />
+            <BarChart3 className="w-3 h-3 mr-1" />
             图表
           </button>
           <button
             onClick={onExportCSV}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="flex items-center px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700"
           >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             导出CSV

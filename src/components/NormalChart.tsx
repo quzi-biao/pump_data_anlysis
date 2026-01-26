@@ -14,12 +14,18 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+interface LineStyle {
+  color: string;
+  thickness: number;
+}
+
 interface Props {
   result: AnalysisResult;
   chartType: 'line' | 'bar';
+  lineStyles?: Record<string, LineStyle>;
 }
 
-export default function NormalChart({ result, chartType }: Props) {
+export default function NormalChart({ result, chartType, lineStyles }: Props) {
   const { data, config } = result;
 
   // 获取所有数值列（排除时间戳）
@@ -27,8 +33,8 @@ export default function NormalChart({ result, chartType }: Props) {
     key => key !== 'timestamp' && typeof data[0][key] === 'number'
   );
 
-  // 颜色方案
-  const colors = [
+  // 默认颜色方案
+  const defaultColors = [
     '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
     '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
   ];
@@ -78,10 +84,10 @@ export default function NormalChart({ result, chartType }: Props) {
                 <Line
                   type="monotone"
                   dataKey={column}
-                  stroke={colors[index % colors.length]}
+                  stroke={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}
                   name={column}
                   dot={false}
-                  strokeWidth={2}
+                  strokeWidth={lineStyles?.[column]?.thickness || 2}
                 />
               </LineChart>
             ) : (
@@ -104,7 +110,7 @@ export default function NormalChart({ result, chartType }: Props) {
                 <Legend />
                 <Bar
                   dataKey={column}
-                  fill={colors[index % colors.length]}
+                  fill={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}
                   name={column}
                 />
               </BarChart>
