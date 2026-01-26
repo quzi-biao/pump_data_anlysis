@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: pump-data-analysis
     ports:
-      - "3003:3000"
+      - "3003:3003"
     environment:
       - NODE_ENV=production
     restart: unless-stopped
