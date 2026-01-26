@@ -116,10 +116,8 @@ export default function DataQueryPanel({ configs }: Props) {
     setComparisonType(query.comparisonType);
     setSelectedMonths(query.selectedMonths || []);
     setCurrentQueryId(query.id);
-    // 加载保存的图表样式
-    if (query.chartStyles) {
-      setCurrentChartStyles(query.chartStyles);
-    }
+    // 加载保存的图表样式，如果没有则重置为null
+    setCurrentChartStyles(query.chartStyles || null);
   };
 
   // 保存图表样式到数据库
@@ -248,6 +246,9 @@ export default function DataQueryPanel({ configs }: Props) {
 
     setLoading(true);
     setError(null);
+    // 重置样式设置
+    setCurrentChartStyles(null);
+    setCurrentQueryId(null);
 
     try {
       let queryStartTime: string;

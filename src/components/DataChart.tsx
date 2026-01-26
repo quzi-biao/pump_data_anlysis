@@ -91,8 +91,31 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
       if (chartStyles.lineStyles) setLineStyles(chartStyles.lineStyles);
       if (chartStyles.groupStyles) setGroupStyles(chartStyles.groupStyles);
       if (chartStyles.backgroundZones) setBackgroundZones(chartStyles.backgroundZones);
+    } else {
+      // 重置为默认样式
+      const defaultLineStyles: Record<string, LineStyle> = {};
+      numericColumns.forEach((col, index) => {
+        defaultLineStyles[col] = {
+          color: DEFAULT_COLORS[index % DEFAULT_COLORS.length],
+          thickness: 2
+        };
+      });
+      setLineStyles(defaultLineStyles);
+
+      const defaultGroupStyles: Record<string, Record<string, GroupStyle>> = {};
+      numericColumns.forEach((col) => {
+        defaultGroupStyles[col] = {};
+        comparisonGroups.forEach((group, index) => {
+          defaultGroupStyles[col][group as string] = {
+            color: DEFAULT_COLORS[index % DEFAULT_COLORS.length]
+          };
+        });
+      });
+      setGroupStyles(defaultGroupStyles);
+
+      setBackgroundZones([]);
     }
-  }, [chartStyles]);
+  }, [chartStyles, numericColumns, comparisonGroups]);
 
   const updateLineStyle = (column: string, updates: Partial<LineStyle>) => {
     const newStyles = {

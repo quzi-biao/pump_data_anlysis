@@ -31,6 +31,7 @@ export function calculateExtendedIndicator(
 ): number | null {
   // 移除公式中的所有空格
   let expression = formula.replace(/\s/g, '');
+  const originalExpression = expression;
   
   try {
     // 替换公式中的指标名称为实际值
@@ -47,8 +48,14 @@ export function calculateExtendedIndicator(
       expression = expression.replace(regex, `(${value})`);
     });
 
-    console.log('Formula:', formula);
-    console.log('After replacement:', expression);
+    // 检查是否还有未替换的指标名称（包含中文字符）
+    // 如果公式中的指标在 values 中不存在，表达式将包含非数字/运算符字符
+    if (expression === originalExpression || /[\u4e00-\u9fa5]/.test(expression)) {
+      // 公式中引用的指标不存在或没有数据，返回 null
+      // console.warn('Formula references missing indicators:', formula);
+      // console.warn('Available indicators:', Array.from(values.keys()));
+      return null;
+    }
 
     // 安全计算表达式
     const result = evaluateExpression(expression);
@@ -238,6 +245,9 @@ export function processAnalysisData(
   const baseIndicatorNames = new Set(baseDataMap.keys());
   const dependencies = detectExtendedIndicatorDependencies(extendedIndicators, baseIndicatorNames);
   const sortedExtendedIndicators = topologicalSortExtendedIndicators(extendedIndicators, dependencies);
+  
+  console.log('Extended indicators calculation order:', sortedExtendedIndicators.map(ind => ind.name));
+  console.log('Dependencies:', Array.from(dependencies.entries()).map(([name, deps]) => ({ name, deps: Array.from(deps) })));
   
   const rows: AnalysisDataRow[] = [];
 
