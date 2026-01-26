@@ -368,7 +368,11 @@ export function processAnalysisData(
       if (finalValue !== null) {
         // 将计算结果添加到 indicatorValues 中，供后续扩展指标使用
         indicatorValues.set(extIndicator.name, finalValue);
-        row[extIndicator.name] = finalValue;
+        
+        // 只有当扩展指标设置为可见时，才添加到结果行中
+        if (extIndicator.visible !== false) {
+          row[extIndicator.name] = finalValue;
+        }
       }
     });
     

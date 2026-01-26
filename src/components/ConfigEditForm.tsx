@@ -191,6 +191,14 @@ export default function ConfigEditForm({ editingConfig, onConfigChange, onSave, 
           <div className="space-y-2">
             {(editingConfig.extendedIndicators || []).map((indicator, index) => (
               <div key={indicator.id} className="flex gap-2 items-center p-2 bg-gray-50 rounded">
+                <label className="flex items-center cursor-pointer" title="是否显示">
+                  <input
+                    type="checkbox"
+                    checked={indicator.visible !== false}
+                    onChange={(e) => updateExtendedIndicator(index, 'visible', e.target.checked)}
+                    className="w-3.5 h-3.5 rounded"
+                  />
+                </label>
                 <input
                   type="text"
                   value={indicator.name}

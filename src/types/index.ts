@@ -27,6 +27,7 @@ export interface ExtendedIndicator {
   formula: string; // 运算公式，例如: "i1 + i2", "i1 / i2 * 100"
   baseIndicators: string[]; // 依赖的基础指标 ID 列表
   label?: string; // 关联的导入数据标签，如果存在则从 MySQL 查询并与计算结果合并
+  visible?: boolean; // 是否在结果中显示，默认为 true
 }
 
 // 分析配置
