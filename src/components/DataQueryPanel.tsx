@@ -343,7 +343,7 @@ export default function DataQueryPanel({ configs }: Props) {
   };
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-12rem)]">
+    <div className="flex gap-6 h-[calc(100vh-8rem)]">
       {/* Left Panel - Query Form */}
       <div className="w-96 flex-shrink-0 space-y-6 overflow-y-auto">
         <QueryForm

@@ -99,7 +99,7 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
   };
 
   // 准备图表数据
-  let chartData = data.map(row => ({
+  let chartData: Array<Record<string, any>> = data.map(row => ({
     ...row,
     displayTime: formatTimestamp(row.timestamp as string),
   }));

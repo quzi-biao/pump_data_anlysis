@@ -40,31 +40,9 @@ export default function QueryResult({ result, error, chartStyles, onExportCSV, o
   return (
     <div className="bg-white rounded-lg border p-6">
       {/* Header with Result Info and Actions */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex justify-between items-start">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">查询结果</h2>
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-600">
-            <div>
-              <span className="font-medium">数据条数：</span>
-              <span className="text-gray-900">{result.data.length}</span>
-            </div>
-            <div>
-              <span className="font-medium">时间范围：</span>
-              <span className="text-gray-900">
-                {result.config.timeDimension === 'day'
-                  ? `${new Date(result.timeRange.start).toLocaleDateString('zh-CN')} 至 ${new Date(result.timeRange.end).toLocaleDateString('zh-CN')}`
-                  : `${new Date(result.timeRange.start).toLocaleString('zh-CN')} 至 ${new Date(result.timeRange.end).toLocaleString('zh-CN')}`
-                }
-              </span>
-            </div>
-            <div>
-              <span className="font-medium">对比方式：</span>
-              <span className="text-gray-900">
-                {result.comparisonType === 'none' ? '无' :
-                 result.comparisonType === 'month' ? '按月' : '按日'}
-              </span>
-            </div>
-          </div>
         </div>
         <div className="flex space-x-2">
           <button
