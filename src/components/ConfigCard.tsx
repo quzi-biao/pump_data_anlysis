@@ -1,13 +1,14 @@
 'use client';
 
 import { AnalysisConfig } from '@/types';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Copy } from 'lucide-react';
 
 interface Props {
   config: AnalysisConfig;
   showDelete: boolean;
   onEdit: (config: AnalysisConfig) => void;
   onDelete: (id: number) => void;
+  onCopy: (config: AnalysisConfig) => void;
 }
 
 const getAggregationLabel = (type: string) => {
@@ -19,7 +20,7 @@ const getAggregationLabel = (type: string) => {
   }
 };
 
-export default function ConfigCard({ config, showDelete, onEdit, onDelete }: Props) {
+export default function ConfigCard({ config, showDelete, onEdit, onDelete, onCopy }: Props) {
   return (
     <div className="bg-white rounded-lg border p-5 hover:shadow-lg transition-shadow flex flex-col relative">
       <div className="flex-1">
@@ -27,13 +28,22 @@ export default function ConfigCard({ config, showDelete, onEdit, onDelete }: Pro
         <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-1">
             {config.name}
         </h3>
-          <button
-            onClick={() => onEdit(config)}
-            className="absolute top-3 right-3 p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-            title="编辑"
+          <div className="absolute top-3 right-3 flex gap-1">
+            <button
+              onClick={() => onCopy(config)}
+              className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+              title="复制"
             >
-            <Edit2 className="w-4 h-4" />
-          </button>
+              <Copy className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onEdit(config)}
+              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              title="编辑"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         
         {config.description && (

@@ -33,6 +33,19 @@ export default function AnalysisConfigManager({ configs, onConfigsChange, loadin
     setIsEditing(true);
   };
 
+  const handleCopy = (config: AnalysisConfig) => {
+    // 创建配置的副本，移除 id 并修改名称
+    const copiedConfig: Partial<AnalysisConfig> = {
+      name: `${config.name} - 副本`,
+      description: config.description,
+      baseIndicators: JSON.parse(JSON.stringify(config.baseIndicators)),
+      extendedIndicators: JSON.parse(JSON.stringify(config.extendedIndicators)),
+      timeDimension: config.timeDimension,
+    };
+    setEditingConfig(copiedConfig);
+    setIsEditing(true);
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('确定要删除此分析配置吗？')) return;
 
@@ -168,6 +181,7 @@ export default function AnalysisConfigManager({ configs, onConfigsChange, loadin
                 showDelete={showDeleteMode}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onCopy={handleCopy}
               />
             ))
           )}
