@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceArea,
 } from 'recharts';
 
 interface LineStyle {
@@ -19,13 +20,22 @@ interface LineStyle {
   thickness: number;
 }
 
+interface BackgroundZone {
+  id: string;
+  start: number;
+  end: number;
+  color: string;
+  label: string;
+}
+
 interface Props {
   result: AnalysisResult;
   chartType: 'line' | 'bar';
   lineStyles?: Record<string, LineStyle>;
+  backgroundZones?: BackgroundZone[];
 }
 
-export default function NormalChart({ result, chartType, lineStyles }: Props) {
+export default function NormalChart({ result, chartType, lineStyles, backgroundZones = [] }: Props) {
   const { data, config } = result;
 
   // 获取所有数值列（排除时间戳）
@@ -81,6 +91,17 @@ export default function NormalChart({ result, chartType, lineStyles }: Props) {
                   labelFormatter={(label) => `时间: ${label}`}
                 />
                 <Legend />
+                {/* Background Zones */}
+                {backgroundZones.map((zone) => (
+                  <ReferenceArea
+                    key={zone.id}
+                    x1={chartData[zone.start]?.displayTime}
+                    x2={chartData[zone.end]?.displayTime}
+                    fill={zone.color}
+                    fillOpacity={0.3}
+                    label={{ value: zone.label, position: 'top', fontSize: 10 }}
+                  />
+                ))}
                 <Line
                   type="monotone"
                   dataKey={column}
@@ -108,6 +129,17 @@ export default function NormalChart({ result, chartType, lineStyles }: Props) {
                   labelFormatter={(label) => `时间: ${label}`}
                 />
                 <Legend />
+                {/* Background Zones */}
+                {backgroundZones.map((zone) => (
+                  <ReferenceArea
+                    key={zone.id}
+                    x1={chartData[zone.start]?.displayTime}
+                    x2={chartData[zone.end]?.displayTime}
+                    fill={zone.color}
+                    fillOpacity={0.3}
+                    label={{ value: zone.label, position: 'top', fontSize: 10 }}
+                  />
+                ))}
                 <Bar
                   dataKey={column}
                   fill={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}

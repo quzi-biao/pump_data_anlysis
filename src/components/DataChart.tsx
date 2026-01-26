@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AnalysisResult } from '@/types';
 import ComparisonChart from './ComparisonChart';
 import NormalChart from './NormalChart';
+import ChartStyleConfig, { BackgroundZone } from './ChartStyleConfig';
 import { Settings } from 'lucide-react';
 
 interface Props {
@@ -42,6 +43,14 @@ export default function DataChart({ result }: Props) {
     ? Array.from(new Set(data.map(row => (row as any).comparisonGroup)))
     : [];
 
+  // 计算横轴范围（基于数据索引）
+  const xAxisRange = useMemo(() => {
+    return {
+      min: 0,
+      max: data.length - 1
+    };
+  }, [data.length]);
+
   // 初始化线条样式（用于非对比模式）
   const [lineStyles, setLineStyles] = useState<Record<string, LineStyle>>(() => {
     const styles: Record<string, LineStyle> = {};
@@ -67,6 +76,9 @@ export default function DataChart({ result }: Props) {
     });
     return styles;
   });
+
+  // 背景区域配置
+  const [backgroundZones, setBackgroundZones] = useState<BackgroundZone[]>([]);
 
   const updateLineStyle = (column: string, updates: Partial<LineStyle>) => {
     setLineStyles(prev => ({
@@ -138,90 +150,36 @@ export default function DataChart({ result }: Props) {
 
       {/* Style Settings Panel */}
       {showSettings && (
-        <div className="bg-gray-50 border rounded p-3">
-          <h4 className="text-xs font-medium text-gray-700 mb-2">
-            {hasComparisonGroup ? '对比组样式设置' : '曲线样式设置'}
-          </h4>
-          
-          {hasComparisonGroup ? (
-            // 对比模式：显示每个指标的每个对比组的颜色设置
-            <div className="space-y-3">
-              {numericColumns.map((column) => (
-                <div key={column} className="bg-white border rounded p-2">
-                  <div className="text-xs font-medium text-gray-700 mb-2">{column}</div>
-                  <div className="flex items-center gap-2">
-                    <div className="grid grid-cols-4 gap-2 flex-1">
-                      {comparisonGroups.map((group) => (
-                        <div key={`${column}-${group}`} className="flex items-center gap-1 p-1.5 bg-gray-50 border rounded">
-                          <span className="text-[10px] text-gray-600 flex-1 truncate" title={String(group)}>
-                            {String(group)}
-                          </span>
-                          <input
-                            type="color"
-                            value={groupStyles[column]?.[group as string]?.color || DEFAULT_COLORS[0]}
-                            onChange={(e) => updateGroupStyle(column, group as string, e.target.value)}
-                            className="w-6 h-5 rounded cursor-pointer"
-                            title={`${group} 的颜色`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1 p-1.5 bg-gray-50 border rounded flex-shrink-0">
-                      <span className="text-[10px] text-gray-600 flex-1 truncate">粗细</span>
-                      <select
-                        value={lineStyles[column]?.thickness || 2}
-                        onChange={(e) => updateLineStyle(column, { thickness: Number(e.target.value) })}
-                        className="px-1 py-0.5 text-xs border rounded bg-white"
-                        title="线条粗细"
-                      >
-                        <option value="1">细</option>
-                        <option value="2">中</option>
-                        <option value="3">粗</option>
-                        <option value="4">很粗</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            // 非对比模式：显示每个指标的颜色和粗细
-            <div className="grid grid-cols-2 gap-2">
-              {numericColumns.map((column) => (
-                <div key={column} className="flex items-center gap-2 p-2 bg-white border rounded">
-                  <span className="text-xs text-gray-700 flex-1 truncate" title={column}>
-                    {column}
-                  </span>
-                  <input
-                    type="color"
-                    value={lineStyles[column]?.color || DEFAULT_COLORS[0]}
-                    onChange={(e) => updateLineStyle(column, { color: e.target.value })}
-                    className="w-8 h-6 rounded cursor-pointer"
-                    title="选择颜色"
-                  />
-                  <select
-                    value={lineStyles[column]?.thickness || 2}
-                    onChange={(e) => updateLineStyle(column, { thickness: Number(e.target.value) })}
-                    className="px-1 py-0.5 text-xs border rounded"
-                    title="线条粗细"
-                  >
-                    <option value="1">细</option>
-                    <option value="2">中</option>
-                    <option value="3">粗</option>
-                    <option value="4">很粗</option>
-                  </select>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ChartStyleConfig
+          numericColumns={numericColumns}
+          comparisonGroups={comparisonGroups}
+          hasComparisonGroup={hasComparisonGroup}
+          lineStyles={lineStyles}
+          groupStyles={groupStyles}
+          backgroundZones={backgroundZones}
+          xAxisRange={xAxisRange}
+          onUpdateLineStyle={updateLineStyle}
+          onUpdateGroupStyle={updateGroupStyle}
+          onUpdateBackgroundZones={setBackgroundZones}
+        />
       )}
 
       {/* Charts */}
       {hasComparisonGroup ? (
-        <ComparisonChart result={result} chartType={chartType} lineStyles={lineStyles} groupStyles={groupStyles} />
+        <ComparisonChart 
+          result={result} 
+          chartType={chartType} 
+          lineStyles={lineStyles} 
+          groupStyles={groupStyles}
+          backgroundZones={backgroundZones}
+        />
       ) : (
-        <NormalChart result={result} chartType={chartType} lineStyles={lineStyles} />
+        <NormalChart 
+          result={result} 
+          chartType={chartType} 
+          lineStyles={lineStyles}
+          backgroundZones={backgroundZones}
+        />
       )}
     </div>
   );

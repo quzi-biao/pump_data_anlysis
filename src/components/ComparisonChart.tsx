@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceArea,
 } from 'recharts';
 
 interface LineStyle {
@@ -23,14 +24,23 @@ interface GroupStyle {
   color: string;
 }
 
+interface BackgroundZone {
+  id: string;
+  start: number;
+  end: number;
+  color: string;
+  label: string;
+}
+
 interface Props {
   result: AnalysisResult;
   chartType: 'line' | 'bar';
   lineStyles?: Record<string, LineStyle>;
   groupStyles?: Record<string, Record<string, GroupStyle>>;
+  backgroundZones?: BackgroundZone[];
 }
 
-export default function ComparisonChart({ result, chartType, lineStyles, groupStyles }: Props) {
+export default function ComparisonChart({ result, chartType, lineStyles, groupStyles, backgroundZones = [] }: Props) {
   const { data, config } = result;
 
   // 获取所有数值列（排除时间戳和对比组）
@@ -141,6 +151,17 @@ export default function ComparisonChart({ result, chartType, lineStyles, groupSt
                   }
                 />
                 <Legend />
+                {/* Background Zones */}
+                {backgroundZones.map((zone) => (
+                  <ReferenceArea
+                    key={zone.id}
+                    x1={chartData[zone.start]?.displayTime}
+                    x2={chartData[zone.end]?.displayTime}
+                    fill={zone.color}
+                    fillOpacity={0.3}
+                    label={{ value: zone.label, position: 'top', fontSize: 10 }}
+                  />
+                ))}
                 {comparisonGroups.map((group, groupIndex) => {
                   // 如果是按月对比且时间维度是天，使用重组后的数据键
                   const dataKey = (result.comparisonType === 'month' && config.timeDimension === 'day')
@@ -202,6 +223,17 @@ export default function ComparisonChart({ result, chartType, lineStyles, groupSt
                   }
                 />
                 <Legend />
+                {/* Background Zones */}
+                {backgroundZones.map((zone) => (
+                  <ReferenceArea
+                    key={zone.id}
+                    x1={chartData[zone.start]?.displayTime}
+                    x2={chartData[zone.end]?.displayTime}
+                    fill={zone.color}
+                    fillOpacity={0.3}
+                    label={{ value: zone.label, position: 'top', fontSize: 10 }}
+                  />
+                ))}
                 {comparisonGroups.map((group, groupIndex) => {
                   // 如果是按月对比且时间维度是天，使用重组后的数据键
                   const dataKey = (result.comparisonType === 'month' && config.timeDimension === 'day')
