@@ -66,7 +66,7 @@ export async function queryIndicatorData(
         r["_measurement"] == "plcData" and
         r["_field"] == "value" and
         r["indicator_id"] == "${indicatorId}")
-    |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false)
+    |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false, offset: 0s)
   `;
 
   const dataPoints: DataPoint[] = [];
@@ -86,6 +86,68 @@ export async function queryIndicatorData(
         reject(error);
       },
       complete() {
+        resolve(dataPoints);
+      },
+    });
+  });
+}
+
+export async function queryPressureData(
+  sn: string,
+  startTime: string,
+  endTime: string,
+  timeDimension: TimeDimension = 'minute',
+  aggregationType: string = 'avg'
+): Promise<DataPoint[]> {
+  const queryApi = getInfluxDB().getQueryApi(INFLUX_CONFIG.org);
+  const aggregationWindow = getAggregationWindow(timeDimension);
+
+  let aggregateFn: string;
+  switch (aggregationType) {
+    case 'avg':
+      aggregateFn = 'mean';
+      break;
+    case 'max':
+      aggregateFn = 'max';
+      break;
+    case 'min':
+      aggregateFn = 'min';
+      break;
+    default:
+      aggregateFn = 'mean';
+  }
+  
+  const query = `
+    from(bucket: "pressData")
+    |> range(start: ${startTime}, stop: ${endTime})
+    |> filter(fn: (r) => 
+        r["_measurement"] == "pressureData" and
+        r["_field"] == "press" and
+        r["sn"] == "${sn}")
+    |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false, offset: 0s)
+  `;
+
+  console.log('Pressure query for SN:', sn);
+  console.log('Query:', query);
+
+  const dataPoints: DataPoint[] = [];
+
+  return new Promise((resolve, reject) => {
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row);
+        dataPoints.push({
+          time: o._time,
+          value: parseFloat(o._value),
+          indicator_id: `P:${sn}`,
+        });
+      },
+      error(error) {
+        console.error('InfluxDB pressure query error for SN:', sn, error);
+        reject(error);
+      },
+      complete() {
+        console.log(`Pressure query complete for SN ${sn}: ${dataPoints.length} points`);
         resolve(dataPoints);
       },
     });

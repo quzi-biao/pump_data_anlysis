@@ -101,9 +101,8 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
   return (
     <div className="space-y-8">
       {numericColumns.map((column, index) => (
-        <div key={column} className="border rounded-lg p-4" ref={(el) => { chartRefs.current[column] = el; }}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">{column}</h3>
+        <div key={column} className="border rounded-lg p-4">
+          <div className="flex justify-end mb-2">
             <button
               onClick={() => exportChartToPNG(column)}
               className="px-2 py-1 text-xs rounded flex items-center bg-green-600 text-white hover:bg-green-700"
@@ -112,9 +111,11 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
               保存PNG
             </button>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            {chartType === 'line' ? (
-              <LineChart data={chartData}>
+          <div ref={(el) => { chartRefs.current[column] = el; }}>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{column}</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              {chartType === 'line' ? (
+                <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="displayTime"
@@ -142,52 +143,53 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                     label={{ value: zone.label, position: 'top', fontSize: 10 }}
                   />
                 ))}
-                <Line
-                  type="monotone"
-                  dataKey={column}
-                  stroke={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}
-                  name={column}
-                  dot={false}
-                  strokeWidth={lineStyles?.[column]?.thickness || 2}
-                />
-              </LineChart>
-            ) : (
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="displayTime"
-                  tick={{ fontSize: 12 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  formatter={(value: any) => 
-                    typeof value === 'number' ? value.toFixed(4) : value
-                  }
-                  labelFormatter={(label) => `时间: ${label}`}
-                />
-                <Legend />
-                {/* Background Zones */}
-                {backgroundZones.map((zone) => (
-                  <ReferenceArea
-                    key={zone.id}
-                    x1={chartData[zone.start]?.displayTime}
-                    x2={chartData[zone.end]?.displayTime}
-                    fill={zone.color}
-                    fillOpacity={0.3}
-                    label={{ value: zone.label, position: 'top', fontSize: 10 }}
+                  <Line
+                    type="monotone"
+                    dataKey={column}
+                    stroke={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}
+                    name={column}
+                    dot={false}
+                    strokeWidth={lineStyles?.[column]?.thickness || 2}
                   />
-                ))}
-                <Bar
-                  dataKey={column}
-                  fill={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}
-                  name={column}
-                />
-              </BarChart>
-            )}
-          </ResponsiveContainer>
+                </LineChart>
+              ) : (
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="displayTime"
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(value: any) => 
+                      typeof value === 'number' ? value.toFixed(4) : value
+                    }
+                    labelFormatter={(label) => `时间: ${label}`}
+                  />
+                  <Legend />
+                  {/* Background Zones */}
+                  {backgroundZones.map((zone) => (
+                    <ReferenceArea
+                      key={zone.id}
+                      x1={chartData[zone.start]?.displayTime}
+                      x2={chartData[zone.end]?.displayTime}
+                      fill={zone.color}
+                      fillOpacity={0.3}
+                      label={{ value: zone.label, position: 'top', fontSize: 10 }}
+                    />
+                  ))}
+                  <Bar
+                    dataKey={column}
+                    fill={lineStyles?.[column]?.color || defaultColors[index % defaultColors.length]}
+                    name={column}
+                  />
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          </div>
         </div>
       ))}
     </div>

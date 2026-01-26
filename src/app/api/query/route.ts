@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { queryIndicatorData } from '@/lib/influxdb';
+import { queryIndicatorData, queryPressureData } from '@/lib/influxdb';
 import { processAnalysisData, groupByMonth, groupByDay } from '@/lib/calculator';
 import { AnalysisConfig, QueryParams, AnalysisResult, ApiResponse, DataPoint, TimeDimension, AggregationType } from '@/types';
 
@@ -134,8 +134,24 @@ export async function POST(request: NextRequest) {
       config.baseIndicators.map(async (indicator) => {
         let data: DataPoint[];
         
+        // 检查指标 ID 是否以 "P:" 开头（压力计数据）
+        if (indicator.indicator_id.startsWith('P:')) {
+          // 提取压力计的 SN（P: 后面的部分）
+          const sn = indicator.indicator_id.substring(2);
+          
+          // 从 pressData bucket 查询压力计数据
+          data = await queryPressureData(
+            sn,
+            params.startTime,
+            params.endTime,
+            config.timeDimension,
+            indicator.aggregation || 'avg'
+          );
+          
+          console.log(`Pressure sensor "${sn}": ${data.length} data points`);
+        }
         // 如果指标有关联标签，同时从 InfluxDB 和 MySQL 导入表查询数据，然后合并
-        if (indicator.label) {
+        else if (indicator.label) {
           const [influxData, importedData] = await Promise.all([
             queryIndicatorData(
               indicator.indicator_id,

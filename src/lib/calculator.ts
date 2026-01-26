@@ -105,7 +105,15 @@ export function mergeDataPoints(
 ): Map<string, Map<string, number>> {
   const timeSeriesMap = new Map<string, Map<string, number>>();
 
+  // 记录每个指标的时间戳范围
+  console.log('=== Merging data points ===');
   dataMap.forEach((dataPoints, indicatorName) => {
+    if (dataPoints.length > 0) {
+      const firstTime = new Date(dataPoints[0].time).toISOString();
+      const lastTime = new Date(dataPoints[dataPoints.length - 1].time).toISOString();
+      console.log(`${indicatorName}: ${dataPoints.length} points, from ${firstTime} to ${lastTime}`);
+    }
+    
     dataPoints.forEach((point) => {
       const timestamp = new Date(point.time).toISOString();
       
@@ -117,6 +125,19 @@ export function mergeDataPoints(
       timeSeriesMap.get(timestamp)!.set(indicatorName, point.value);
     });
   });
+
+  console.log(`Total unique timestamps: ${timeSeriesMap.size}`);
+  
+  // 显示前3个时间戳及其包含的指标
+  let count = 0;
+  for (const [timestamp, indicators] of timeSeriesMap.entries()) {
+    if (count < 3) {
+      console.log(`Timestamp ${timestamp}: ${Array.from(indicators.keys()).join(', ')}`);
+      count++;
+    } else {
+      break;
+    }
+  }
 
   return timeSeriesMap;
 }
@@ -321,7 +342,25 @@ export function processAnalysisData(
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
-  return rows;
+  console.log(`Total rows generated (before filtering): ${rows.length}`);
+  
+  // 过滤掉只有压力数据的行（至少要有一个非压力指标）
+  const filteredRows = rows.filter(row => {
+    const keys = Object.keys(row);
+    // 检查是否有非timestamp和非压力的指标
+    const hasNonPressureData = keys.some(key => 
+      key !== 'timestamp' && !key.includes('末端压力')
+    );
+    return hasNonPressureData;
+  });
+  
+  console.log(`Total rows after filtering: ${filteredRows.length}`);
+  if (filteredRows.length > 0) {
+    console.log('First row columns:', Object.keys(filteredRows[0]));
+    console.log('First row sample:', filteredRows[0]);
+  }
+
+  return filteredRows;
 }
 
 /**

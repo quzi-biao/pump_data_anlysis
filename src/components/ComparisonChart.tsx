@@ -161,9 +161,8 @@ export default function ComparisonChart({ result, chartType, lineStyles, groupSt
   return (
     <div className="space-y-8">
       {numericColumns.map((column, index) => (
-        <div key={column} className="border rounded-lg p-4" ref={(el) => { chartRefs.current[column] = el; }}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">{column}</h3>
+        <div key={column} className="border rounded-lg p-4">
+          <div className="flex justify-end mb-2">
             <button
               onClick={() => exportChartToPNG(column)}
               className="px-2 py-1 text-xs rounded flex items-center bg-green-600 text-white hover:bg-green-700"
@@ -172,7 +171,9 @@ export default function ComparisonChart({ result, chartType, lineStyles, groupSt
               保存PNG
             </button>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
+          <div ref={(el) => { chartRefs.current[column] = el; }}>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{column}</h3>
+            <ResponsiveContainer width="100%" height={300}>
             {chartType === 'line' ? (
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -294,7 +295,8 @@ export default function ComparisonChart({ result, chartType, lineStyles, groupSt
                 })}
               </BarChart>
             )}
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         </div>
       ))}
     </div>
