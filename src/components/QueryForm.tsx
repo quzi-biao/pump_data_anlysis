@@ -37,7 +37,7 @@ export default function QueryForm({
   onQuery,
   onSave,
 }: Props) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [timeSelectMode, setTimeSelectMode] = useState<'range' | 'months'>('range');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const selectedConfig = configs.find(c => c.id === selectedConfigId);
