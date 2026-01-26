@@ -2,24 +2,10 @@
 
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-
-interface LineStyle {
-  color: string;
-  thickness: number;
-}
+import { BackgroundZone, LineStyle } from '@/types/chart';
 
 interface GroupStyle {
   color: string;
-}
-
-export interface BackgroundZone {
-  id: string;
-  start: number;
-  end: number;
-  color: string;
-  label: string;
-  showAverage?: boolean;
-  averageLineColor?: string;
 }
 
 interface Props {

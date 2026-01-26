@@ -4,14 +4,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { AnalysisResult } from '@/types';
 import ComparisonChart from './ComparisonChart';
 import NormalChart from './NormalChart';
-import { BackgroundZone } from './ChartStyleConfig';
+import { 
+  NormalMetricStyle, 
+  ComparisonMetricStyle, 
+  LineStyle,
+  BackgroundZone 
+} from '@/types/chart';
 import { Settings } from 'lucide-react';
-
-interface MetricStyle {
-  color: string;
-  thickness: number;
-  backgroundZones: BackgroundZone[];
-}
 
 interface Props {
   result: AnalysisResult;
@@ -20,11 +19,6 @@ interface Props {
   canSaveStyles?: boolean;
   onSaveStyles?: () => void;
   queryName?: string;
-}
-
-interface LineStyle {
-  color: string;
-  thickness: number;
 }
 
 interface GroupStyle {
@@ -137,7 +131,16 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
   }, [chartStyles, numericColumns, comparisonGroups]);
 
   // 处理来自 NormalChart 的 metricStyles 更新
-  const handleMetricStylesChange = (metricStyles: Record<string, MetricStyle>) => {
+  const handleNormalMetricStylesChange = (metricStyles: Record<string, NormalMetricStyle>) => {
+    if (onChartStylesChange) {
+      onChartStylesChange({
+        metricStyles,
+      });
+    }
+  };
+
+  // 处理来自 ComparisonChart 的 metricStyles 更新
+  const handleComparisonMetricStylesChange = (metricStyles: Record<string, ComparisonMetricStyle>) => {
     if (onChartStylesChange) {
       onChartStylesChange({
         metricStyles,
@@ -213,9 +216,12 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
           result={result} 
           chartType={'line'} 
           lineStyles={lineStyles} 
-          groupStyles={groupStyles}
           backgroundZones={backgroundZones}
           queryName={queryName}
+          onStylesChange={handleComparisonMetricStylesChange}
+          canSaveStyles={canSaveStyles}
+          onSaveStyles={onSaveStyles}
+          savedMetricStyles={chartStyles?.metricStyles}
         />
       ) : (
         <NormalChart 
@@ -223,7 +229,7 @@ export default function DataChart({ result, chartStyles, onChartStylesChange, ca
           lineStyles={lineStyles}
           backgroundZones={backgroundZones}
           queryName={queryName}
-          onStylesChange={handleMetricStylesChange}
+          onStylesChange={handleNormalMetricStylesChange}
           canSaveStyles={canSaveStyles}
           onSaveStyles={onSaveStyles}
           savedMetricStyles={chartStyles?.metricStyles}
