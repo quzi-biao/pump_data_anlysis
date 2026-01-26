@@ -5,7 +5,7 @@ import { processAnalysisData, groupByMonth, groupByDay } from '@/lib/calculator'
 import { AnalysisConfig, QueryParams, AnalysisResult, ApiResponse, DataPoint, TimeDimension, AggregationType } from '@/types';
 
 // 合并两个数据源的数据点，按时间戳对齐
-function mergeDataPoints(influxData: DataPoint[], importedData: DataPoint[]): DataPoint[] {
+function mergeDataPoints(influxData: DataPoint[], importedData: DataPoint[], indicatorId: string): DataPoint[] {
   // 创建时间到数据点的映射
   const dataMap = new Map<string, { influx?: number; imported?: number }>();
   
@@ -30,7 +30,7 @@ function mergeDataPoints(influxData: DataPoint[], importedData: DataPoint[]): Da
     // 如果两个数据源都有值，优先使用导入数据
     const value = values.imported !== undefined ? values.imported : values.influx;
     if (value !== undefined) {
-      mergedData.push({ time, value });
+      mergedData.push({ time, value, indicator_id: indicatorId });
     }
   });
   
@@ -46,7 +46,8 @@ async function queryImportedData(
   startTime: string,
   endTime: string,
   timeDimension: TimeDimension,
-  aggregation: AggregationType
+  aggregation: AggregationType,
+  indicatorId: string
 ): Promise<DataPoint[]> {
   // 根据时间维度选择对应的表
   const tableName = timeDimension === 'day' 
@@ -121,6 +122,7 @@ async function queryImportedData(
     return {
       time: isoTime,
       value: row.value,
+      indicator_id: indicatorId,
     };
   });
 }
@@ -199,7 +201,8 @@ export async function POST(request: NextRequest) {
               params.startTime,
               params.endTime,
               config.timeDimension,
-              indicator.aggregation || 'avg'
+              indicator.aggregation || 'avg',
+              indicator.indicator_id
             )
           ]);
           
@@ -207,7 +210,7 @@ export async function POST(request: NextRequest) {
           console.log(`MySQL imported data: ${importedData.length} points`);
           
           // 合并两个数据源的数据
-          data = mergeDataPoints(influxData, importedData);
+          data = mergeDataPoints(influxData, importedData, indicator.indicator_id);
           
           console.log(`Merged data: ${data.length} points`);
         } else {
@@ -247,7 +250,8 @@ export async function POST(request: NextRequest) {
             params.startTime,
             params.endTime,
             config.timeDimension,
-            'avg' // 扩展指标使用均值聚合
+            'avg', // 扩展指标使用均值聚合
+            indicator.id
           );
           extendedDataMap.set(indicator.name, data);
         }
