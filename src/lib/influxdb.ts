@@ -62,7 +62,7 @@ export async function queryIndicatorData(
   
   let query: string;
   
-  // 月度聚合使用 window 函数按自然月分组
+  // 月度聚合：使用 aggregateWindow 并设置 offset 对齐到月初
   if (timeDimension === 'month') {
     query = `
       from(bucket: "${INFLUX_CONFIG.bucket}")
@@ -71,10 +71,7 @@ export async function queryIndicatorData(
           r["_measurement"] == "plcData" and
           r["_field"] == "value" and
           r["indicator_id"] == "${indicatorId}")
-      |> window(every: 1mo, offset: 0s)
-      |> ${aggregateFn}()
-      |> duplicate(column: "_stop", as: "_time")
-      |> window(every: inf)
+      |> aggregateWindow(every: 1mo, fn: ${aggregateFn}, createEmpty: false, timeSrc: "_start")
     `;
   } else {
     const aggregationWindow = getAggregationWindow(timeDimension);
@@ -138,7 +135,7 @@ export async function queryPressureData(
   
   let query: string;
   
-  // 月度聚合使用 window 函数按自然月分组
+  // 月度聚合：使用 aggregateWindow 并设置 timeSrc 对齐到窗口开始
   if (timeDimension === 'month') {
     query = `
       from(bucket: "pressData")
@@ -147,10 +144,7 @@ export async function queryPressureData(
           r["_measurement"] == "pressureData" and
           r["_field"] == "press" and
           r["sn"] == "${sn}")
-      |> window(every: 1mo, offset: 0s)
-      |> ${aggregateFn}()
-      |> duplicate(column: "_stop", as: "_time")
-      |> window(every: inf)
+      |> aggregateWindow(every: 1mo, fn: ${aggregateFn}, createEmpty: false, timeSrc: "_start")
     `;
   } else {
     const aggregationWindow = getAggregationWindow(timeDimension);

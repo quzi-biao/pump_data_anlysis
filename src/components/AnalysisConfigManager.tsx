@@ -65,29 +65,10 @@ export default function AnalysisConfigManager({ configs, onConfigsChange, loadin
     }
   };
 
-  // 计算配置内容的 MD5
-  const calculateConfigMD5 = async (config: Partial<AnalysisConfig>): Promise<string> => {
-    const content = JSON.stringify({
-      baseIndicators: config.baseIndicators,
-      extendedIndicators: config.extendedIndicators,
-      timeDimension: config.timeDimension,
-    });
-    
-    const encoder = new TextEncoder();
-    const data = encoder.encode(content);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
-  };
-
   const handleSave = async () => {
     if (!editingConfig) return;
 
     try {
-      // 计算当前配置的 MD5
-      const currentMD5 = await calculateConfigMD5(editingConfig);
-      
       // 检查是否存在相同内容的配置（排除当前编辑的配置）
       const duplicateConfig = configs.find(c => {
         if (editingConfig.id && c.id === editingConfig.id) return false;
