@@ -383,7 +383,7 @@ export default function DataQueryPanel({ configs }: Props) {
           canSaveStyles={!!currentQueryId}
           onSaveStyles={saveChartStyles}
           queryName={currentQueryName || undefined}
-          queryId={currentQueryId || undefined}
+          queryId={currentQueryId ? parseInt(currentQueryId) : undefined}
         />
       </div>
 
