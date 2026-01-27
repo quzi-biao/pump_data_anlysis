@@ -592,7 +592,7 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
                 ))}
                 {/* Zone Average Lines - for each metric in group */}
                 {columns.map(col => {
-                  const style = metricStyles[col];
+                  const style = metricStyles[col]||[];
                   return style.backgroundZones.map((zone) => {
                     if (!zone.showAverage) return null;
                     const avg = calculateZoneAverage(col, zone);

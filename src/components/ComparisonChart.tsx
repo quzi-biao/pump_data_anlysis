@@ -657,7 +657,7 @@ export default function ComparisonChart({ result, chartType, lineStyles, backgro
                   
                   {/* Render all columns in this group */}
                   {columns.map(column => {
-                    const colStyle = metricStyles[column];
+                    const colStyle = metricStyles[column]||{};
                     
                     return comparisonGroups.map((group) => {
                       const monthStyle = colStyle.monthStyles[group as string];
