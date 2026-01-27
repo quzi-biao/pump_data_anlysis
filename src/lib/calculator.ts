@@ -448,7 +448,7 @@ export function groupByDay(data: AnalysisDataRow[]): Map<string, AnalysisDataRow
 export function applyAggregation(
   dataMap: Map<string, DataPoint[]>,
   baseIndicators: Array<{ indicator_id: string; aggregation?: AggregationType }>,
-  timeDimension: 'minute' | 'hour' | 'day' = 'minute'
+  timeDimension: 'minute' | 'hour' | 'day' | 'month' = 'minute'
 ): Map<string, DataPoint[]> {
   const aggregatedMap = new Map<string, DataPoint[]>();
 
@@ -494,7 +494,7 @@ export function applyAggregation(
  */
 function groupDataPointsByTimeDimension(
   dataPoints: DataPoint[],
-  timeDimension: 'minute' | 'hour' | 'day'
+  timeDimension: 'minute' | 'hour' | 'day' | 'month'
 ): Map<string, DataPoint[]> {
   const grouped = new Map<string, DataPoint[]>();
 
@@ -503,6 +503,9 @@ function groupDataPointsByTimeDimension(
     let timeKey: string;
 
     switch (timeDimension) {
+      case 'month':
+        timeKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+        break;
       case 'day':
         timeKey = date.toISOString().split('T')[0];
         break;

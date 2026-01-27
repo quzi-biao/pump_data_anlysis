@@ -50,7 +50,8 @@ async function queryImportedData(
   indicatorId: string
 ): Promise<DataPoint[]> {
   // 根据时间维度选择对应的表
-  const tableName = timeDimension === 'day' 
+  // 月度数据从日导入数据表查询
+  const tableName = timeDimension === 'month' || timeDimension === 'day'
     ? 'data_daily_import' 
     : timeDimension === 'hour' 
     ? 'data_hour_import' 
@@ -63,7 +64,11 @@ async function queryImportedData(
   let timeFormat: string;
   let groupBy: string;
   
-  if (timeDimension === 'day') {
+  if (timeDimension === 'month') {
+    // 月度：从日数据按月聚合
+    timeFormat = '%Y-%m-01';
+    groupBy = 'DATE_FORMAT(timestamp, "%Y-%m")';
+  } else if (timeDimension === 'day') {
     timeFormat = '%Y-%m-%d';
     groupBy = 'DATE(timestamp)';
   } else if (timeDimension === 'hour') {
@@ -184,35 +189,53 @@ export async function POST(request: NextRequest) {
           
           console.log(`Pressure sensor "${sn}": ${data.length} data points`);
         }
-        // 如果指标有关联标签，同时从 InfluxDB 和 MySQL 导入表查询数据，然后合并
+        // 如果指标有关联标签
         else if (indicator.label) {
           console.log(`\n=== Indicator "${indicator.name}" has label: "${indicator.label}" ===`);
           
-          const [influxData, importedData] = await Promise.all([
-            queryIndicatorData(
-              indicator.indicator_id,
-              params.startTime,
-              params.endTime,
-              config.timeDimension,
-              indicator.aggregation || 'avg'
-            ),
-            queryImportedData(
+          // 检查是否有有效的 indicator_id
+          const hasValidIndicatorId = indicator.indicator_id && indicator.indicator_id.trim() !== '';
+          
+          if (hasValidIndicatorId) {
+            // 同时从 InfluxDB 和 MySQL 导入表查询数据，然后合并
+            const [influxData, importedData] = await Promise.all([
+              queryIndicatorData(
+                indicator.indicator_id,
+                params.startTime,
+                params.endTime,
+                config.timeDimension,
+                indicator.aggregation || 'avg'
+              ),
+              queryImportedData(
+                indicator.label,
+                params.startTime,
+                params.endTime,
+                config.timeDimension,
+                indicator.aggregation || 'avg',
+                indicator.indicator_id
+              )
+            ]);
+            
+            console.log(`InfluxDB data: ${influxData.length} points`);
+            console.log(`MySQL imported data: ${importedData.length} points`);
+            
+            // 合并两个数据源的数据
+            data = mergeDataPoints(influxData, importedData, indicator.indicator_id);
+            
+            console.log(`Merged data: ${data.length} points`);
+          } else {
+            // 只有 label 没有 indicator_id，只从 MySQL 查询
+            console.log(`No indicator_id, querying only from MySQL`);
+            data = await queryImportedData(
               indicator.label,
               params.startTime,
               params.endTime,
               config.timeDimension,
               indicator.aggregation || 'avg',
-              indicator.indicator_id
-            )
-          ]);
-          
-          console.log(`InfluxDB data: ${influxData.length} points`);
-          console.log(`MySQL imported data: ${importedData.length} points`);
-          
-          // 合并两个数据源的数据
-          data = mergeDataPoints(influxData, importedData, indicator.indicator_id);
-          
-          console.log(`Merged data: ${data.length} points`);
+              indicator.name // 使用指标名称作为 ID
+            );
+            console.log(`MySQL imported data: ${data.length} points`);
+          }
         } else {
           // 否则只从 InfluxDB 查询数据
           data = await queryIndicatorData(

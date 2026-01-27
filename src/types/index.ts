@@ -1,5 +1,5 @@
 // 时间维度
-export type TimeDimension = 'minute' | 'hour' | 'day';
+export type TimeDimension = 'minute' | 'hour' | 'day' | 'month';
 
 // 对比维度
 export type ComparisonType = 'none' | 'month' | 'day';
@@ -85,6 +85,7 @@ export interface ApiResponse<T> {
 // 数据导入相关类型
 
 // 导入数据类型（决定导入到哪个表）
+// 注意：月度数据不需要单独导入，而是从日数据按月聚合得到
 export type ImportDataType = 'minute' | 'hour' | 'day';
 
 // 数据格式（行数据/列数据）

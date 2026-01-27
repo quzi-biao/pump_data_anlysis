@@ -28,6 +28,8 @@ function getAggregationWindow(timeDimension: TimeDimension): string {
       return '1h';
     case 'day':
       return '1d';
+    case 'month':
+      return '30d'; // InfluxDB 使用 30 天作为月度聚合窗口
     default:
       return '1m';
   }
@@ -41,7 +43,6 @@ export async function queryIndicatorData(
   aggregationType: string = 'avg'
 ): Promise<DataPoint[]> {
   const queryApi = getInfluxDB().getQueryApi(INFLUX_CONFIG.org);
-  const aggregationWindow = getAggregationWindow(timeDimension);
 
   // 根据聚合类型使用对应的 InfluxDB 聚合函数
   let aggregateFn: string;
@@ -59,15 +60,34 @@ export async function queryIndicatorData(
       aggregateFn = 'mean';
   }
   
-  const query = `
-    from(bucket: "${INFLUX_CONFIG.bucket}")
-    |> range(start: ${startTime}, stop: ${endTime})
-    |> filter(fn: (r) => 
-        r["_measurement"] == "plcData" and
-        r["_field"] == "value" and
-        r["indicator_id"] == "${indicatorId}")
-    |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false, offset: 0s)
-  `;
+  let query: string;
+  
+  // 月度聚合使用 window 函数按自然月分组
+  if (timeDimension === 'month') {
+    query = `
+      from(bucket: "${INFLUX_CONFIG.bucket}")
+      |> range(start: ${startTime}, stop: ${endTime})
+      |> filter(fn: (r) => 
+          r["_measurement"] == "plcData" and
+          r["_field"] == "value" and
+          r["indicator_id"] == "${indicatorId}")
+      |> window(every: 1mo, offset: 0s)
+      |> ${aggregateFn}()
+      |> duplicate(column: "_stop", as: "_time")
+      |> window(every: inf)
+    `;
+  } else {
+    const aggregationWindow = getAggregationWindow(timeDimension);
+    query = `
+      from(bucket: "${INFLUX_CONFIG.bucket}")
+      |> range(start: ${startTime}, stop: ${endTime})
+      |> filter(fn: (r) => 
+          r["_measurement"] == "plcData" and
+          r["_field"] == "value" and
+          r["indicator_id"] == "${indicatorId}")
+      |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false, offset: 0s)
+    `;
+  }
 
   const dataPoints: DataPoint[] = [];
 
@@ -100,7 +120,6 @@ export async function queryPressureData(
   aggregationType: string = 'avg'
 ): Promise<DataPoint[]> {
   const queryApi = getInfluxDB().getQueryApi(INFLUX_CONFIG.org);
-  const aggregationWindow = getAggregationWindow(timeDimension);
 
   let aggregateFn: string;
   switch (aggregationType) {
@@ -117,15 +136,34 @@ export async function queryPressureData(
       aggregateFn = 'mean';
   }
   
-  const query = `
-    from(bucket: "pressData")
-    |> range(start: ${startTime}, stop: ${endTime})
-    |> filter(fn: (r) => 
-        r["_measurement"] == "pressureData" and
-        r["_field"] == "press" and
-        r["sn"] == "${sn}")
-    |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false, offset: 0s)
-  `;
+  let query: string;
+  
+  // 月度聚合使用 window 函数按自然月分组
+  if (timeDimension === 'month') {
+    query = `
+      from(bucket: "pressData")
+      |> range(start: ${startTime}, stop: ${endTime})
+      |> filter(fn: (r) => 
+          r["_measurement"] == "pressureData" and
+          r["_field"] == "press" and
+          r["sn"] == "${sn}")
+      |> window(every: 1mo, offset: 0s)
+      |> ${aggregateFn}()
+      |> duplicate(column: "_stop", as: "_time")
+      |> window(every: inf)
+    `;
+  } else {
+    const aggregationWindow = getAggregationWindow(timeDimension);
+    query = `
+      from(bucket: "pressData")
+      |> range(start: ${startTime}, stop: ${endTime})
+      |> filter(fn: (r) => 
+          r["_measurement"] == "pressureData" and
+          r["_field"] == "press" and
+          r["sn"] == "${sn}")
+      |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggregateFn}, createEmpty: false, offset: 0s)
+    `;
+  }
 
   console.log('Pressure query for SN:', sn);
   console.log('Query:', query);

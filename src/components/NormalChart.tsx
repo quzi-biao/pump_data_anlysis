@@ -179,6 +179,8 @@ export default function NormalChart({ result, chartType, lineStyles, backgroundZ
       return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     } else if (config.timeDimension === 'hour') {
       return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit' });
+    } else if (config.timeDimension === 'month') {
+      return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit' });
     } else {
       return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
     }

@@ -174,6 +174,8 @@ export default function ComparisonChart({ result, chartType, lineStyles, backgro
         return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
       } else if (config.timeDimension === 'hour') {
         return `${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}时`;
+      } else if (config.timeDimension === 'month') {
+        return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit' });
       } else {
         return `${date.getDate()}日`;
       }
@@ -184,6 +186,8 @@ export default function ComparisonChart({ result, chartType, lineStyles, backgro
       return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     } else if (config.timeDimension === 'hour') {
       return `${String(date.getHours()).padStart(2, '0')}时`;
+    } else if (config.timeDimension === 'month') {
+      return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit' });
     } else {
       return `${date.getMonth() + 1}-${date.getDate()}`;
     }

@@ -77,7 +77,9 @@ export default function DataTable({ result }: Props) {
                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                   >
                     {column === 'timestamp'
-                      ? config.timeDimension === 'day'
+                      ? config.timeDimension === 'month'
+                        ? new Date(row[column] as string).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit' })
+                        : config.timeDimension === 'day'
                         ? new Date(row[column] as string).toLocaleDateString('zh-CN')
                         : new Date(row[column] as string).toLocaleString('zh-CN')
                       : typeof row[column] === 'number'

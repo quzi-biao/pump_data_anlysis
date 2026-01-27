@@ -90,6 +90,7 @@ export default function ConfigEditForm({ editingConfig, onConfigChange, onSave, 
               <option value="minute">分钟</option>
               <option value="hour">小时</option>
               <option value="day">日</option>
+              <option value="month">月</option>
             </select>
           </div>
 

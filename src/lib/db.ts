@@ -40,7 +40,7 @@ export async function initDatabase() {
       description TEXT,
       base_indicators JSON NOT NULL,
       extended_indicators JSON NOT NULL,
-      time_dimension ENUM('minute', 'hour', 'day') NOT NULL DEFAULT 'minute',
+      time_dimension ENUM('minute', 'hour', 'day', 'month') NOT NULL DEFAULT 'minute',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_name (name),
