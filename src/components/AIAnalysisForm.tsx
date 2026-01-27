@@ -9,6 +9,7 @@ import { submitToN8n } from '@/lib/n8n-service';
 interface Props {
   result: AnalysisResult | null;
   queryName?: string;
+  queryId?: number;
   onAnalysisComplete: (result: AIAnalysisResponse) => void;
 }
 
@@ -35,7 +36,7 @@ const PROMPT_TEMPLATES = [
   },
 ];
 
-export default function AIAnalysisForm({ result, queryName, onAnalysisComplete }: Props) {
+export default function AIAnalysisForm({ result, queryName, queryId, onAnalysisComplete }: Props) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -75,6 +76,24 @@ export default function AIAnalysisForm({ result, queryName, onAnalysisComplete }
 
       if (response.success && response.result) {
         onAnalysisComplete(response.result);
+        
+        // 如果有 queryId，保存分析报告到数据库
+        if (queryId) {
+          try {
+            await fetch(`/api/query/${queryId}/ai-analysis`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                analysis: response.result,
+              }),
+            });
+          } catch (saveError) {
+            console.error('保存分析报告失败:', saveError);
+            // 不影响主流程，只记录错误
+          }
+        }
       } else {
         setError(response.error || '分析失败，请重试');
       }
@@ -176,11 +195,6 @@ export default function AIAnalysisForm({ result, queryName, onAnalysisComplete }
           </>
         )}
       </button>
-
-      {/* Info */}
-      <div className="text-xs text-gray-500 text-center">
-        分析由 n8n 工作流驱动，通常需要 10-30 秒
-      </div>
     </div>
   );
 }

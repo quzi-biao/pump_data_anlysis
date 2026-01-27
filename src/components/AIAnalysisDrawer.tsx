@@ -11,6 +11,7 @@ interface Props {
   onClose: () => void;
   result: AnalysisResult | null;
   queryName?: string;
+  queryId?: number;
 }
 
 export interface AIAnalysisResponse {
@@ -23,7 +24,7 @@ export interface AIAnalysisResponse {
   metrics?: Record<string, any>;
 }
 
-export default function AIAnalysisDrawer({ isOpen, onClose, result, queryName }: Props) {
+export default function AIAnalysisDrawer({ isOpen, onClose, result, queryName, queryId }: Props) {
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResponse | null>(null);
 
   if (!isOpen) return null;
@@ -39,8 +40,8 @@ export default function AIAnalysisDrawer({ isOpen, onClose, result, queryName }:
       {/* Drawer */}
       <div className="fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-white shadow-2xl z-50 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-purple-600 to-blue-600">
-          <h2 className="text-xl font-bold text-white">AI 数据解读</h2>
+        <div className="flex items-center justify-between p-2 border-b bg-gradient-to-r from-purple-600 to-blue-600">
+          <h4 className="font-bold text-white">AI 数据解读</h4>
           <button
             onClick={onClose}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -55,12 +56,14 @@ export default function AIAnalysisDrawer({ isOpen, onClose, result, queryName }:
             <AIAnalysisForm
               result={result}
               queryName={queryName}
+              queryId={queryId}
               onAnalysisComplete={setAnalysisResult}
             />
           ) : (
             <AIAnalysisResult
               result={analysisResult}
               onReset={() => setAnalysisResult(null)}
+              queryId={queryId}
             />
           )}
         </div>

@@ -7,7 +7,7 @@
 const N8N_CONFIG = {
   baseUrl: 'https://n8n.waters-ai.work',
   apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTVlNzNmYS0zNWE2LTRiMjItYWM1Yi0yMTU3ZWM0N2UyMjEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY4MTQyNjIxfQ.srEtupJd_zxll1FJBAk96Bvssi9x08TGco0ipADanLY',
-  webhookPath: '/webhook/analysis'
+  webhookPath: '/webhook/98a0d653-f1c8-4733-aa1b-2546d562363b'
 };
 
 export interface N8nAnalysisRequest {
@@ -42,12 +42,14 @@ export interface N8nAnalysisResponse {
 
 /**
  * 提交数据到 n8n 进行 AI 分析
+ * 通过本地 API 代理，避免 CORS 问题
  */
 export async function submitToN8n(request: N8nAnalysisRequest): Promise<N8nAnalysisResponse> {
-  const webhookUrl = `${N8N_CONFIG.baseUrl}${N8N_CONFIG.webhookPath}`;
+  // 使用本地 API 代理
+  const apiUrl = '/api/n8n-analysis';
   
   try {
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +59,8 @@ export async function submitToN8n(request: N8nAnalysisRequest): Promise<N8nAnaly
     });
 
     if (!response.ok) {
-      throw new Error(`n8n 请求失败: ${response.status} ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `请求失败: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
