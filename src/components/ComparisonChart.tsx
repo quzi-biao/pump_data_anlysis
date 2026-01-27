@@ -189,12 +189,59 @@ export default function ComparisonChart({ result, chartType, lineStyles, backgro
     }
   };
 
+  // 移除异常大值和小值的函数（使用IQR方法）
+  const removeOutliers = (data: any[], column: string) => {
+    const values = data
+      .map(row => row[column])
+      .filter(val => typeof val === 'number' && !isNaN(val))
+      .sort((a, b) => a - b);
+    
+    if (values.length < 4) return data; // 数据太少，不过滤
+    
+    // 计算四分位数
+    const q1Index = Math.floor(values.length * 0.25);
+    const q3Index = Math.floor(values.length * 0.75);
+    const q1 = values[q1Index];
+    const q3 = values[q3Index];
+    const iqr = q3 - q1;
+    
+    // 定义异常值边界（上下界都过滤，系数为50）
+    const lowerBound = q1 - 50 * iqr;
+    const upperBound = q3 + 50 * iqr;
+    
+    // 过滤异常值
+    return data.map(row => {
+      const value = row[column];
+      if (typeof value === 'number' && (value < lowerBound || value > upperBound)) {
+        // 将异常值替换为null，这样图表会跳过这个点
+        return { ...row, [column]: null };
+      }
+      return row;
+    });
+  };
+
   // 准备图表数据（先定义变量，后面会赋值）
   let chartData: Array<Record<string, any>> = data.map(row => ({
     ...row,
     displayTime: formatTimestamp(row.timestamp as string),
     dayOfMonth: new Date(row.timestamp as string).getDate(),
   }));
+
+  // 对每个数值列移除异常值
+  numericColumns.forEach(column => {
+    chartData = removeOutliers(chartData, column);
+  });
+  
+  // 过滤0值点，将0替换为null使其不在曲线上显示
+  chartData = chartData.map(row => {
+    const newRow = { ...row };
+    numericColumns.forEach(column => {
+      if (newRow[column] === 0) {
+        newRow[column] = null;
+      }
+    });
+    return newRow;
+  });
 
   // 如果是按月对比且时间维度是天，需要重组数据结构
   if (result.comparisonType === 'month' && config.timeDimension === 'day') {
