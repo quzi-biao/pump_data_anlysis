@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { AnalysisResult } from '@/types';
-import { Table as TableIcon, BarChart3, Search } from 'lucide-react';
+import { Table as TableIcon, BarChart3, Search, Sparkles } from 'lucide-react';
 import DataTable from './DataTable';
 import DataChart from './DataChart';
+import AIAnalysisDrawer from './AIAnalysisDrawer';
 
 interface Props {
   result: AnalysisResult | null;
@@ -19,6 +20,7 @@ interface Props {
 
 export default function QueryResult({ result, error, chartStyles, onExportCSV, onChartStylesChange, canSaveStyles, onSaveStyles, queryName }: Props) {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
+  const [showAIDrawer, setShowAIDrawer] = useState(false);
 
   if (error) {
     return (
@@ -68,6 +70,13 @@ export default function QueryResult({ result, error, chartStyles, onExportCSV, o
             图表
           </button>
           <button
+            onClick={() => setShowAIDrawer(true)}
+            className="flex items-center px-3 py-1.5 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
+          >
+            <Sparkles className="w-3 h-3 mr-1" />
+            AI解读
+          </button>
+          <button
             onClick={onExportCSV}
             className="flex items-center px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700"
           >
@@ -92,6 +101,14 @@ export default function QueryResult({ result, error, chartStyles, onExportCSV, o
           queryName={queryName}
         />
       )}
+
+      {/* AI Analysis Drawer */}
+      <AIAnalysisDrawer
+        isOpen={showAIDrawer}
+        onClose={() => setShowAIDrawer(false)}
+        result={result}
+        queryName={queryName}
+      />
     </div>
   );
 }
