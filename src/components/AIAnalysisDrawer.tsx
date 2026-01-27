@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { AnalysisResult } from '@/types';
 import AIAnalysisForm from './AIAnalysisForm';
@@ -26,6 +26,11 @@ export interface AIAnalysisResponse {
 
 export default function AIAnalysisDrawer({ isOpen, onClose, result, queryName, queryId }: Props) {
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResponse | null>(null);
+
+  // 当 queryId 变化时，重置分析结果
+  useEffect(() => {
+    setAnalysisResult(null);
+  }, [queryId]);
 
   if (!isOpen) return null;
 
