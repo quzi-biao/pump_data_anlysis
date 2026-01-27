@@ -206,8 +206,8 @@ export default function ComparisonChart({ result, chartType, lineStyles, backgro
     const iqr = q3 - q1;
     
     // 定义异常值边界（上下界都过滤，系数为50）
-    const lowerBound = q1 - 50 * iqr;
-    const upperBound = q3 + 50 * iqr;
+    const lowerBound = q1 - 1.5 * iqr;
+    const upperBound = q3 + 1.5 * iqr;
     
     // 过滤异常值
     return data.map(row => {
