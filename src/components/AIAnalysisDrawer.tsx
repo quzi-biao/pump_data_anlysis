@@ -12,6 +12,7 @@ interface Props {
   result: AnalysisResult | null;
   queryName?: string;
   queryId?: number;
+  initialAnalysis?: AIAnalysisResponse | null;
 }
 
 export interface AIAnalysisResponse {
@@ -24,13 +25,20 @@ export interface AIAnalysisResponse {
   metrics?: Record<string, any>;
 }
 
-export default function AIAnalysisDrawer({ isOpen, onClose, result, queryName, queryId }: Props) {
+export default function AIAnalysisDrawer({ isOpen, onClose, result, queryName, queryId, initialAnalysis }: Props) {
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResponse | null>(null);
 
   // 当 queryId 变化时，重置分析结果
   useEffect(() => {
     setAnalysisResult(null);
   }, [queryId]);
+
+  // 当传入 initialAnalysis 时，设置为当前分析结果
+  useEffect(() => {
+    if (initialAnalysis) {
+      setAnalysisResult(initialAnalysis);
+    }
+  }, [initialAnalysis]);
 
   if (!isOpen) return null;
 

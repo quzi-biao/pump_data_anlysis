@@ -78,7 +78,9 @@ export default function QueryResult({ result, error, chartStyles, onExportCSV, o
                 <p className="text-xs text-gray-700 line-clamp-2 mb-2">{latestAnalysis.summary}</p>
               )}
               <button
-                onClick={() => setShowAIDrawer(true)}
+                onClick={() => {
+                  setShowAIDrawer(true);
+                }}
                 className="text-xs text-purple-600 hover:text-purple-700 font-medium"
               >
                 查看完整报告 →
@@ -172,6 +174,7 @@ export default function QueryResult({ result, error, chartStyles, onExportCSV, o
         result={result}
         queryName={queryName}
         queryId={queryId}
+        initialAnalysis={latestAnalysis}
       />
     </div>
   );
