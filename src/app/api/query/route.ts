@@ -47,18 +47,59 @@ async function queryImportedData(
   endTime: string,
   timeDimension: TimeDimension,
   aggregation: AggregationType,
-  indicatorId: string
+  indicatorId: string,
+  dataSource?: string,
+  weightField?: string
 ): Promise<DataPoint[]> {
-  // 根据时间维度选择对应的表
-  // 月度数据从日导入数据表查询
-  const tableName = timeDimension === 'month' || timeDimension === 'day'
-    ? 'data_daily_import' 
-    : timeDimension === 'hour' 
-    ? 'data_hour_import' 
-    : 'data_import';
+  // 根据 dataSource 或 timeDimension 选择对应的表
+  // 如果指定了 dataSource，优先使用 dataSource
+  // 否则智能选择：按优先级尝试多个表，使用第一个有数据的表
+  let tableName: string;
+  let tablesToTry: string[] = [];
+  
+  if (dataSource) {
+    // 用户明确指定了数据源
+    tableName = dataSource === 'day' 
+      ? 'data_daily_import'
+      : dataSource === 'hour'
+      ? 'data_hour_import'
+      : 'data_import';
+    tablesToTry = [tableName];
+  } else {
+    // 未指定数据源，根据时间维度智能选择
+    // 按从细到粗的顺序尝试：分钟 -> 小时 -> 日
+    if (timeDimension === 'month' || timeDimension === 'day') {
+      tablesToTry = ['data_daily_import', 'data_hour_import', 'data_import'];
+    } else if (timeDimension === 'hour') {
+      tablesToTry = ['data_hour_import', 'data_import'];
+    } else {
+      tablesToTry = ['data_import'];
+    }
+    tableName = tablesToTry[0]; // 默认使用第一个
+  }
 
   // 构建聚合查询
-  const aggFunc = aggregation === 'max' ? 'MAX' : aggregation === 'min' ? 'MIN' : 'AVG';
+  let aggFunc: string;
+  let selectExpression: string;
+  
+  if (aggregation === 'weighted_avg' && weightField) {
+    // 加权平均：计算 (值字段 * 加权字段) 的平均值
+    // 需要从两个不同的 label1 查询数据并计算
+    aggFunc = 'AVG';
+    selectExpression = `${aggFunc}(t1.value * t2.value)`;
+  } else if (aggregation === 'sum') {
+    aggFunc = 'SUM';
+    selectExpression = `${aggFunc}(value)`;
+  } else if (aggregation === 'max') {
+    aggFunc = 'MAX';
+    selectExpression = `${aggFunc}(value)`;
+  } else if (aggregation === 'min') {
+    aggFunc = 'MIN';
+    selectExpression = `${aggFunc}(value)`;
+  } else {
+    aggFunc = 'AVG';
+    selectExpression = `${aggFunc}(value)`;
+  }
   
   // 根据时间维度确定时间格式和分组
   let timeFormat: string;
@@ -79,34 +120,78 @@ async function queryImportedData(
     groupBy = 'DATE_FORMAT(timestamp, "%Y-%m-%d %H:%i:00")';
   }
 
-  const sql = `
-    SELECT 
-      DATE_FORMAT(timestamp, '${timeFormat}') as time,
-      ${aggFunc}(value) as value
-    FROM ${tableName}
-    WHERE label1 = ?
-      AND timestamp >= ?
-      AND timestamp <= ?
-    GROUP BY ${groupBy}
-    ORDER BY timestamp ASC
-  `;
+  // 尝试从多个表查询数据
+  let results: any[] = [];
+  let actualTableUsed = tableName;
+  
+  for (const tryTable of tablesToTry) {
+    let sql: string;
+    let params: any[];
+    
+    if (aggregation === 'weighted_avg' && weightField) {
+      // 加权平均：需要 JOIN 两个表
+      sql = `
+        SELECT 
+          DATE_FORMAT(t1.timestamp, '${timeFormat}') as time,
+          ${selectExpression} as value
+        FROM ${tryTable} t1
+        INNER JOIN ${tryTable} t2 
+          ON t1.timestamp = t2.timestamp
+        WHERE t1.label1 = ?
+          AND t2.label1 = ?
+          AND t1.timestamp >= ?
+          AND t1.timestamp <= ?
+        GROUP BY ${groupBy.replace('timestamp', 't1.timestamp')}
+        ORDER BY t1.timestamp ASC
+      `;
+      params = [label, weightField, startTime, endTime];
+    } else {
+      // 普通聚合查询
+      sql = `
+        SELECT 
+          DATE_FORMAT(timestamp, '${timeFormat}') as time,
+          ${selectExpression} as value
+        FROM ${tryTable}
+        WHERE label1 = ?
+          AND timestamp >= ?
+          AND timestamp <= ?
+        GROUP BY ${groupBy}
+        ORDER BY timestamp ASC
+      `;
+      params = [label, startTime, endTime];
+    }
 
-  console.log(`\n=== Querying imported data ===`);
-  console.log(`Label: "${label}"`);
-  console.log(`Table: ${tableName}`);
-  console.log(`Time range: ${startTime} to ${endTime}`);
-  console.log(`Aggregation: ${aggregation} (${aggFunc})`);
-  console.log(`SQL: ${sql}`);
-  console.log(`Parameters: [${label}, ${startTime}, ${endTime}]`);
+    console.log(`\n=== Querying imported data ===`);
+    console.log(`Label: "${label}"`);
+    console.log(`Table: ${tryTable}`);
+    console.log(`Time range: ${startTime} to ${endTime}`);
+    console.log(`Aggregation: ${aggregation} (${aggFunc})`);
+    if (aggregation === 'weighted_avg' && weightField) {
+      console.log(`Weight field: ${weightField}`);
+    }
+    
+    try {
+      results = await query<any[]>(sql, params);
+      
+      console.log(`Query result: ${results.length} points`);
+      
+      if (results.length > 0) {
+        actualTableUsed = tryTable;
+        console.log(`✓ Data found in table: ${tryTable}`);
+        console.log('First 3 points:', results.slice(0, 3));
+        console.log('Last 3 points:', results.slice(-3));
+        break; // 找到数据就停止尝试
+      } else {
+        console.log(`✗ No data in ${tryTable}, trying next table...`);
+      }
+    } catch (error) {
+      console.error(`Error querying ${tryTable}:`, error);
+      // 继续尝试下一个表
+    }
+  }
   
-  const results = await query<any[]>(sql, [label, startTime, endTime]);
-  
-  console.log(`Query result: ${results.length} points`);
-  if (results.length > 0) {
-    console.log('First 3 points:', results.slice(0, 3));
-    console.log('Last 3 points:', results.slice(-3));
-  } else {
-    console.log('No data found - check if label1, timestamp range, or table is correct');
+  if (results.length === 0) {
+    console.log(`⚠ No data found in any table for label: ${label}`);
   }
 
   // 将时间格式转换为 ISO 格式以匹配 InfluxDB 数据
@@ -212,7 +297,9 @@ export async function POST(request: NextRequest) {
                 params.endTime,
                 config.timeDimension,
                 indicator.aggregation || 'avg',
-                indicator.indicator_id
+                indicator.indicator_id,
+                config.dataSource,
+                indicator.weightField
               )
             ]);
             
@@ -232,7 +319,9 @@ export async function POST(request: NextRequest) {
               params.endTime,
               config.timeDimension,
               indicator.aggregation || 'avg',
-              indicator.name // 使用指标名称作为 ID
+              indicator.name, // 使用指标名称作为 ID
+              config.dataSource,
+              indicator.weightField
             );
             console.log(`MySQL imported data: ${data.length} points`);
           }
@@ -260,13 +349,13 @@ export async function POST(request: NextRequest) {
     );
     
     console.log('Visible indicators:', Array.from(visibleIndicators));
-    console.log('Total extended indicators:', config.extendedIndicators.length);
-    console.log('Extended indicators formulas:', config.extendedIndicators.map(ind => ({ name: ind.name, formula: ind.formula })));
+    console.log('Total extended indicators:', config.extendedIndicators?.length ?? 0);
+    console.log('Extended indicators formulas:', config.extendedIndicators?.map(ind => ({ name: ind.name, formula: ind.formula })) ?? []);
 
     // 查询扩展指标的导入数据（如果有关联标签）
     const extendedDataMap = new Map<string, DataPoint[]>();
     await Promise.all(
-      config.extendedIndicators.map(async (indicator) => {
+      (config.extendedIndicators ?? []).map(async (indicator) => {
         if (indicator.label) {
           const data = await queryImportedData(
             indicator.label,
@@ -274,7 +363,9 @@ export async function POST(request: NextRequest) {
             params.endTime,
             config.timeDimension,
             'avg', // 扩展指标使用均值聚合
-            indicator.id
+            indicator.id,
+            config.dataSource,
+            undefined // 扩展指标不使用加权平均
           );
           extendedDataMap.set(indicator.name, data);
         }
@@ -284,7 +375,7 @@ export async function POST(request: NextRequest) {
     // 处理数据并计算扩展指标
     let processedData = processAnalysisData(
       dataMapByName,
-      config.extendedIndicators,
+      config.extendedIndicators || [],
       visibleIndicators,
       extendedDataMap
     );
