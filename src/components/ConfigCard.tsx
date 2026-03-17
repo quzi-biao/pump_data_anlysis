@@ -58,7 +58,7 @@ export default function ConfigCard({ config, showDelete, onEdit, onDelete, onCop
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600">扩展指标</span>
-            <span className="font-medium text-gray-900">{config.extendedIndicators.length} 个</span>
+            <span className="font-medium text-gray-900">{config.extendedIndicators?.length || 0} 个</span>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600">时间维度</span>
