@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 import { ImportConfig, ImportResult } from '@/types';
 import * as XLSX from 'xlsx';
 
-function parseDate(dateStr: string, format?: string): Date | null {
+function parseDate(dateStr: string, format?: string, defaultYear?: number): Date | null {
   if (!dateStr) return null;
   
   // 将所有 Unicode 空白字符（包括韩文空格等）替换为普通空格，然后去除首尾空格
@@ -13,19 +13,37 @@ function parseDate(dateStr: string, format?: string): Date | null {
     .replace(/\s+/g, ' '); // 将多个连续空格合并为一个
   
   const patterns = [
+    // YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD HH:mm
     /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/,
+    // YYYY-MM-DD
     /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/,
+    // MM-DD HH:mm (需要默认年份)
+    /^(\d{1,2})[-/.](\d{1,2})\s+(\d{1,2}):(\d{1,2})$/,
   ];
   
-  for (const pattern of patterns) {
+  for (let i = 0; i < patterns.length; i++) {
+    const pattern = patterns[i];
     const match = str.match(pattern);
     if (match) {
-      const year = parseInt(match[1]);
-      const month = parseInt(match[2]) - 1;
-      const day = parseInt(match[3]);
-      const hour = match[4] ? parseInt(match[4]) : 0;
-      const minute = match[5] ? parseInt(match[5]) : 0;
-      const second = match[6] ? parseInt(match[6]) : 0;
+      let year: number, month: number, day: number, hour: number, minute: number, second: number;
+      
+      if (i === 2) {
+        // MM-DD HH:mm 格式
+        year = defaultYear || new Date().getFullYear();
+        month = parseInt(match[1]) - 1;
+        day = parseInt(match[2]);
+        hour = parseInt(match[3]);
+        minute = parseInt(match[4]);
+        second = 0;
+      } else {
+        // 其他格式
+        year = parseInt(match[1]);
+        month = parseInt(match[2]) - 1;
+        day = parseInt(match[3]);
+        hour = match[4] ? parseInt(match[4]) : 0;
+        minute = match[5] ? parseInt(match[5]) : 0;
+        second = match[6] ? parseInt(match[6]) : 0;
+      }
       
       return new Date(year, month, day, hour, minute, second);
     }
@@ -107,7 +125,7 @@ export async function POST(request: NextRequest) {
       
       for (let colIdx = config.startColumn; colIdx < dateRow.length; colIdx++) {
         const dateValue = dateRow[colIdx];
-        const parsedDate = parseDate(dateValue, config.dateFormat);
+        const parsedDate = parseDate(dateValue, config.dateFormat, config.defaultYear);
         
         if (!parsedDate) {
           result.errors?.push(`Invalid date at column ${colIdx + 1}: ${dateValue}`);
@@ -142,7 +160,7 @@ export async function POST(request: NextRequest) {
       for (let rowIdx = config.startRow; rowIdx < rawData.length; rowIdx++) {
         const row = rawData[rowIdx];
         const dateValue = row[dateColumn];
-        const parsedDate = parseDate(dateValue, config.dateFormat);
+        const parsedDate = parseDate(dateValue, config.dateFormat, config.defaultYear);
         
         if (!parsedDate) {
           result.errors?.push(`Invalid date at row ${rowIdx + 1}: ${dateValue}`);

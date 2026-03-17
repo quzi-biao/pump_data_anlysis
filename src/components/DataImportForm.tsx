@@ -177,6 +177,12 @@ export default function DataImportForm({ config, mode, onSave, onCancel }: Props
                     <span className="text-blue-900">{formData.dateFormat}</span>
                   </div>
                 )}
+                {formData.defaultYear && (
+                  <div>
+                    <span className="text-blue-600">默认年份：</span>
+                    <span className="text-blue-900">{formData.defaultYear}</span>
+                  </div>
+                )}
                 {(formData.labelMappings || []).length > 0 && (
                   <div className="col-span-2">
                     <span className="text-blue-600">标签映射：</span>
@@ -267,7 +273,23 @@ export default function DataImportForm({ config, mode, onSave, onCancel }: Props
                 placeholder="留空使用默认格式"
               />
               <p className="mt-1 text-xs text-gray-500">
-                默认支持: YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD，可选时间 HH:mm 或 HH:mm:ss
+                默认支持: YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD，可选时间 HH:mm 或 HH:mm:ss，以及 MM-DD HH:mm
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">默认年份（可选）</label>
+              <input
+                type="number"
+                value={formData.defaultYear || ''}
+                onChange={(e) => setFormData({ ...formData, defaultYear: e.target.value ? parseInt(e.target.value) : undefined })}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="如 2025"
+                min="1900"
+                max="2100"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                当日期格式中没有年份时（如 MM-DD HH:mm），将使用此年份
               </p>
             </div>
 

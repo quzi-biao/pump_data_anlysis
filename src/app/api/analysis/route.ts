@@ -55,14 +55,15 @@ export async function POST(request: NextRequest) {
 
     const result = await query<any>(
       `INSERT INTO analysis_configs 
-       (name, description, base_indicators, extended_indicators, time_dimension) 
-       VALUES (?, ?, ?, ?, ?)`,
+       (name, description, base_indicators, extended_indicators, time_dimension, data_source) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [
         body.name,
         body.description || null,
         JSON.stringify(body.baseIndicators),
         JSON.stringify(body.extendedIndicators),
         body.timeDimension,
+        body.dataSource || null,
       ]
     );
 
@@ -99,7 +100,7 @@ export async function PUT(request: NextRequest) {
     await query(
       `UPDATE analysis_configs 
        SET name = ?, description = ?, base_indicators = ?, 
-           extended_indicators = ?, time_dimension = ?
+           extended_indicators = ?, time_dimension = ?, data_source = ?
        WHERE id = ?`,
       [
         body.name,
@@ -107,6 +108,7 @@ export async function PUT(request: NextRequest) {
         JSON.stringify(body.baseIndicators),
         JSON.stringify(body.extendedIndicators),
         body.timeDimension,
+        body.dataSource || null,
         body.id,
       ]
     );
@@ -164,6 +166,7 @@ function parseAnalysisConfig(row: any): AnalysisConfig {
       ? JSON.parse(row.extended_indicators)
       : row.extended_indicators,
     timeDimension: row.time_dimension,
+    dataSource: row.data_source,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

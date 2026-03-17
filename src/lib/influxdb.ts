@@ -56,6 +56,14 @@ export async function queryIndicatorData(
     case 'min':
       aggregateFn = 'min';
       break;
+    case 'sum':
+      aggregateFn = 'sum';
+      break;
+    case 'weighted_avg':
+      // InfluxDB 不直接支持加权平均，使用均值
+      // 加权平均主要用于 MySQL 导入数据
+      aggregateFn = 'mean';
+      break;
     default:
       aggregateFn = 'mean';
   }
@@ -128,6 +136,13 @@ export async function queryPressureData(
       break;
     case 'min':
       aggregateFn = 'min';
+      break;
+    case 'sum':
+      aggregateFn = 'sum';
+      break;
+    case 'weighted_avg':
+      // InfluxDB 不直接支持加权平均，使用均值
+      aggregateFn = 'mean';
       break;
     default:
       aggregateFn = 'mean';

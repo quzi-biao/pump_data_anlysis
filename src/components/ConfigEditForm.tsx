@@ -1,6 +1,6 @@
 'use client';
 
-import { AnalysisConfig, BaseIndicator, ExtendedIndicator, TimeDimension } from '@/types';
+import { AnalysisConfig, BaseIndicator, ExtendedIndicator, TimeDimension, DataSource } from '@/types';
 import { Save, X } from 'lucide-react';
 
 interface Props {
@@ -94,6 +94,27 @@ export default function ConfigEditForm({ editingConfig, onConfigChange, onSave, 
             </select>
           </div>
 
+          {(editingConfig.timeDimension === 'day' || editingConfig.timeDimension === 'month') && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                数据源（可选）
+              </label>
+              <select
+                value={editingConfig.dataSource || ''}
+                onChange={(e) => onConfigChange({ ...editingConfig, dataSource: e.target.value ? e.target.value as DataSource : undefined })}
+                className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">默认（与时间维度一致）</option>
+                <option value="minute">从分钟数据聚合</option>
+                <option value="hour">从小时数据聚合</option>
+                <option value="day">从日数据聚合</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                选择从哪个粒度的数据进行聚合统计
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">描述（可选）</label>
             <input
@@ -156,7 +177,19 @@ export default function ConfigEditForm({ editingConfig, onConfigChange, onSave, 
                     <option value="avg">均值</option>
                     <option value="max">最大值</option>
                     <option value="min">最小值</option>
+                    <option value="sum">求和</option>
+                    <option value="weighted_avg">加权平均</option>
                   </select>
+                  {indicator.aggregation === 'weighted_avg' && (
+                    <input
+                      type="text"
+                      value={indicator.weightField || ''}
+                      onChange={(e) => updateBaseIndicator(index, 'weightField', e.target.value)}
+                      className="px-2 py-1 text-sm border rounded bg-white"
+                      placeholder="加权字段"
+                      title="用于加权平均的字段名（label1）"
+                    />
+                  )}
                   <label className="flex items-center justify-center px-2 py-1 border rounded bg-white cursor-pointer hover:bg-gray-50">
                     <input
                       type="checkbox"

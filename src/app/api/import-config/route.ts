@@ -14,6 +14,7 @@ export async function GET() {
         start_column as startColumn,
         data_format as dataFormat,
         date_format as dateFormat,
+        default_year as defaultYear,
         label_mappings as labelMappings,
         created_at as createdAt,
         updated_at as updatedAt
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
 
     const result = await query<any>(
       `INSERT INTO import_configs 
-        (name, description, data_type, start_row, start_column, data_format, date_format, label_mappings) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        (name, description, data_type, start_row, start_column, data_format, date_format, default_year, label_mappings) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         config.name,
         config.description || null,
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
         config.startColumn,
         config.dataFormat,
         config.dateFormat || null,
+        config.defaultYear || null,
         JSON.stringify(config.labelMappings),
       ]
     );
@@ -75,7 +77,7 @@ export async function PUT(request: NextRequest) {
     await query(
       `UPDATE import_configs 
       SET name = ?, description = ?, data_type = ?, start_row = ?, start_column = ?, 
-          data_format = ?, date_format = ?, label_mappings = ?
+          data_format = ?, date_format = ?, default_year = ?, label_mappings = ?
       WHERE id = ?`,
       [
         config.name,
@@ -85,6 +87,7 @@ export async function PUT(request: NextRequest) {
         config.startColumn,
         config.dataFormat,
         config.dateFormat || null,
+        config.defaultYear || null,
         JSON.stringify(config.labelMappings),
         config.id,
       ]

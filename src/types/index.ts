@@ -1,6 +1,9 @@
 // 时间维度
 export type TimeDimension = 'minute' | 'hour' | 'day' | 'month';
 
+// 数据源（用于日/月维度时选择从哪个粒度的数据聚合）
+export type DataSource = 'minute' | 'hour' | 'day';
+
 // 对比维度
 export type ComparisonType = 'none' | 'month' | 'day';
 
@@ -8,14 +11,15 @@ export type ComparisonType = 'none' | 'month' | 'day';
 export type OperatorType = '+' | '-' | '*' | '/' | 'avg' | 'sum' | 'max' | 'min';
 
 // 聚合方式
-export type AggregationType = 'avg' | 'max' | 'min';
+export type AggregationType = 'avg' | 'max' | 'min' | 'sum' | 'weighted_avg';
 
 // 基础指标
 export interface BaseIndicator {
   id: string;
   name: string;
   indicator_id: string; // InfluxDB 中的指标 ID
-  aggregation?: AggregationType; // 聚合方式：avg(均值), max(最大值), min(最小值)，默认为均值
+  aggregation?: AggregationType; // 聚合方式：avg(均值), max(最大值), min(最小值), sum(求和), weighted_avg(加权平均)，默认为均值
+  weightField?: string; // 加权字段，仅当 aggregation 为 weighted_avg 时使用
   visible?: boolean; // 是否在图表和导出中显示，默认为 true
   label?: string; // 关联的导入数据标签，如果存在则从 MySQL 导入表查询数据
 }
@@ -36,8 +40,9 @@ export interface AnalysisConfig {
   name: string;
   description?: string;
   baseIndicators: BaseIndicator[];
-  extendedIndicators: ExtendedIndicator[];
-  timeDimension: TimeDimension;
+  extendedIndicators?: ExtendedIndicator[];
+  timeDimension: TimeDimension; // 时间维度：minute/hour/day/month
+  dataSource?: DataSource; // 数据源：从哪个粒度的数据聚合（仅对 day/month 维度有效）
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -107,6 +112,7 @@ export interface ImportConfig {
   startColumn: number; // 数据起始列（从1开始）
   dataFormat: DataFormat; // 数据格式：row(日期在第一列) 或 column(日期在第一行)
   dateFormat?: string; // 日期格式，默认支持 YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD 加上可选的 HH:mm
+  defaultYear?: number; // 默认年份，当日期格式中没有年份时使用（如 MM-DD HH:mm）
   labelMappings: LabelMapping[]; // 标签映射表
   createdAt?: Date;
   updatedAt?: Date;

@@ -16,6 +16,8 @@ const getAggregationLabel = (type: string) => {
     case 'avg': return '均值';
     case 'max': return '最大值';
     case 'min': return '最小值';
+    case 'sum': return '求和';
+    case 'weighted_avg': return '加权平均';
     default: return '均值';
   }
 };
